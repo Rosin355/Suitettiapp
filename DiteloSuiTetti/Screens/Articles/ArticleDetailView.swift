@@ -22,18 +22,17 @@ struct ArticleDetailView: View {
                 heroSection
                 contentSection
             }
-            .frame(maxWidth: .infinity)
+            // containerRelativeFrame ensures the VStack is exactly the scroll view's width,
+            // preventing text overflow when maxWidth:.infinity resolves unconstrained inside ScrollView
+            .containerRelativeFrame(.horizontal)
         }
         .scrollIndicators(.hidden)
         .ignoresSafeArea(edges: .top)
         .background(.brandCream)
         .toolbar(.hidden, for: .navigationBar)
-        // safeAreaInset adds clearance at the bottom so the floating tab bar never
-        // covers the last line of body text
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Color.clear.frame(height: 16)
         }
-        // Buttons are pinned outside the scroll view — they never scroll away
         .overlay(alignment: .top) {
             HStack(alignment: .top) {
                 backButton
@@ -55,7 +54,6 @@ struct ArticleDetailView: View {
             .clipped()
             .accessibilityHidden(true)
             .overlay(alignment: .bottom) {
-                // Taller gradient so even a 4–5 line title stays readable over any image
                 LinearGradient(
                     colors: [.clear, .black.opacity(0.55), .black.opacity(0.88)],
                     startPoint: UnitPoint(x: 0.5, y: 0),
@@ -75,13 +73,10 @@ struct ArticleDetailView: View {
                         .foregroundStyle(.white)
                         .kerning(-0.4)
                         .lineSpacing(2)
-                        // Allow up to 5 lines; shrink slightly for very long Italian headlines
                         .lineLimit(5)
                         .minimumScaleFactor(0.82)
-                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                // 24 pt side margins — keeps text away from screen edges
                 .padding(.horizontal, 24)
                 .padding(.bottom, 28)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,11 +113,8 @@ struct ArticleDetailView: View {
                     .lineSpacing(8)
                     .padding(.horizontal, 24)
                     .padding(.top, shouldShowExcerpt ? 16 : 20)
-                    // 100 pt bottom — generous enough for the floating tab bar on all
-                    // iPhone screen sizes, including iPhone Pro Max with home indicator
                     .padding(.bottom, 100)
             } else if !article.excerpt.isEmpty {
-                // Body missing but excerpt exists — show excerpt as the content
                 Text(article.excerpt)
                     .font(.system(size: 17))
                     .foregroundStyle(.brandBlack)
@@ -131,7 +123,6 @@ struct ArticleDetailView: View {
                     .padding(.top, 20)
                     .padding(.bottom, 100)
             } else {
-                // Nothing to show
                 VStack(spacing: 8) {
                     Image(systemName: "doc.text")
                         .font(.system(size: 28))
@@ -172,8 +163,12 @@ struct ArticleDetailView: View {
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 40, height: 40)
+                .background(
+                    Circle()
+                        .fill(.black.opacity(0.35))
+                        .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 2)
+                )
         }
-        .glassEffect(.regular.interactive(), in: .circle)
         .accessibilityLabel("Torna indietro")
     }
 
@@ -185,8 +180,12 @@ struct ArticleDetailView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(.black.opacity(0.35))
+                            .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 2)
+                    )
             }
-            .glassEffect(.regular.interactive(), in: .circle)
             .accessibilityLabel("Condividi articolo")
         }
     }
