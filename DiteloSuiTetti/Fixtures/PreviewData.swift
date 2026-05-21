@@ -55,6 +55,62 @@ extension Article {
     static let categories = ["Tutto", "Famiglia", "Educazione", "Sussidiarietà", "Bene Comune"]
 }
 
+extension Event {
+    static let all: [Event] = [
+        Event(
+            id: UUID(),
+            title: "Presidio civico — Milano",
+            slug: "presidio-civico-milano",
+            type: "Presidio",
+            day: "07",
+            monthShort: "GIU",
+            fullDate: "7 giugno 2026",
+            time: "10:00",
+            location: "Piazza della Scala, Milano",
+            description: "Un momento di incontro e riflessione civica per la città.",
+            link: nil,
+            imageURL: nil,
+            rawDate: Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 7, hour: 10)),
+            updatedAt: Date(),
+            syncVersion: 1
+        ),
+        Event(
+            id: UUID(),
+            title: "Assemblea nazionale — Roma",
+            slug: "assemblea-nazionale-roma",
+            type: "Assemblea",
+            day: "16",
+            monthShort: "GIU",
+            fullDate: "16 giugno 2026",
+            time: "15:00",
+            location: "Via del Corso 42, Roma",
+            description: "Assemblea plenaria dei comitati civici italiani. Aperta a tutti i soci.",
+            link: nil,
+            imageURL: nil,
+            rawDate: Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 16, hour: 15)),
+            updatedAt: Date(),
+            syncVersion: 1
+        ),
+        Event(
+            id: UUID(),
+            title: "Festival dell'umano tutto intero — Firenze",
+            slug: "festival-umano-firenze",
+            type: "Festival",
+            day: "28",
+            monthShort: "GIU",
+            fullDate: "28 giugno 2026",
+            time: "09:00",
+            location: "Piazza della Repubblica, Firenze",
+            description: "Tre giorni di dibattiti, musica e cultura civica nel cuore di Firenze.",
+            link: nil,
+            imageURL: nil,
+            rawDate: Calendar.current.date(from: DateComponents(year: 2026, month: 6, day: 28, hour: 9)),
+            updatedAt: Date(),
+            syncVersion: 1
+        ),
+    ]
+}
+
 extension Document {
     static let all: [Document] = [
         Document(

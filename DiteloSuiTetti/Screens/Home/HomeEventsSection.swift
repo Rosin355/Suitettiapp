@@ -1,23 +1,58 @@
 import SwiftUI
 
 struct HomeEventsSection: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(title: "Prossimi eventi", action: "Tutti") {}
+    @Environment(EventStore.self) private var store
 
-            GCard {
-                VStack(spacing: 0) {
-                    EventRow(day: "07", month: "GIU",
-                             title: "Presidio civico — Milano",
-                             place: "Piazza della Scala, ore 10:00")
-                    EventRow(day: "10", month: "GIU",
-                             title: "Assemblea nazionale — Roma",
-                             place: "Via del Corso 42, ore 15:00",
-                             isLast: true)
+    private var featured: [Event] {
+        Array(store.upcomingEvents.prefix(3))
+    }
+
+    var body: some View {
+        if !featured.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                // Custom header — NavigationLink replaces the plain-closure SectionHeader
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Prossimi eventi")
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(.brandBlack)
+                    Spacer()
+                    NavigationLink("Tutti →") {
+                        EventiView()
+                            .navigationTitle("Eventi")
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.brandRed)
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 10)
+
+                GCard {
+                    VStack(spacing: 0) {
+                        ForEach(Array(featured.enumerated()), id: \.element.id) { index, event in
+                            NavigationLink(destination: EventDetailView(event: event)) {
+                                EventRow(
+                                    day:    event.day,
+                                    month:  event.monthShort,
+                                    title:  event.title,
+                                    place:  placeText(event),
+                                    isLast: index == featured.count - 1
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(.horizontal, DT.padding)
+                .padding(.bottom, 12)
             }
-            .padding(.horizontal, DT.padding)
-            .padding(.bottom, 12)
         }
+    }
+
+    private func placeText(_ event: Event) -> String {
+        var parts: [String] = []
+        if !event.location.isEmpty { parts.append(event.location) }
+        if !event.time.isEmpty     { parts.append("ore \(event.time)") }
+        return parts.joined(separator: " · ")
     }
 }

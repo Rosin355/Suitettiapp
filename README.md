@@ -6,12 +6,26 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v0.5.0** — Document Detail View & PDF Reader  
+**v0.6.0** — Event Detail View & Calendar Integration  
 *Last updated: 21 May 2026*
 
 ---
 
 ## Changelog
+
+### v0.6.0 — Event Detail View & Calendar Integration (21 May 2026)
+- `Event` UI model — id, title, slug, type, day, monthShort, fullDate, time, location, description, link, imageURL, rawDate, isUpcoming
+- `EventDateParser` — parses `YYYY-MM-DD` date strings and flexible time strings to display strings and `Date` values; locale-aware Italian formatting; no force-unwraps
+- `EventServiceProtocol` — `StubEventService` (fixtures) and `LiveEventService` (same API endpoint)
+- `EventStore` — `@MainActor @Observable`; exposes `upcomingEvents` sorted ascending by date
+- `EventDetailView` — immersive hero (RemoteImageView, branded purple fallback), floating dark-circle back/share buttons, "Quando" + "Dove" info cards (Dove is tappable → opens Apple Maps), HTML description, "Aggiungi al calendario" CTA, "Apri evento" external link
+- `EventInfoCard` — reusable card row with icon tile, heading label, primary + secondary lines, optional tap action with arrow indicator
+- `EventiView` — loading/error/empty/list states, pull-to-refresh, NavigationLink → EventDetailView; sorted by date ascending
+- `EventCalendarService` — `@MainActor` singleton; `EKEventStore.requestFullAccessToEvents()` (iOS 17+); all-day event if time is empty, 2-hour timed event otherwise; graceful error handling; Settings deep-link on permission denied
+- `MapsLauncher` — opens Apple Maps via `maps.apple.com/?q=` URL scheme; percent-encodes the location string
+- `HomeEventsSection` — wired to real `EventStore` data; shows first 3 upcoming events; NavigationLink rows; "Tutti →" navigates to `EventiView`
+- `EventStore` + `ArticleStore` loaded concurrently at app launch via `async let`
+- ⚠️ **Required**: add `NSCalendarsFullAccessUsageDescription` to Info.plist via Xcode → Target → Info tab
 
 ### v0.5.0 — Document Detail View & PDF Reader (21 May 2026)
 - `Document` UI model — id, title, slug, type, category, description, url, uploadedAt, updatedAt, syncVersion
@@ -92,7 +106,7 @@ Italian citizens interested in civic participation, local governance, and commun
 | Support / Sostieni screen | ✅ Done |
 | Article detail view | ✅ Done |
 | Document detail view + PDF reader | ✅ Done |
-| Event detail view | 🔲 Next |
+| Event detail view + calendar save | ✅ Done |
 | Delta sync (since timestamp) | 🔲 Next |
 | Push notifications | 🔲 Backlog |
 | Offline reading (SwiftData cache) | 🔲 Backlog |

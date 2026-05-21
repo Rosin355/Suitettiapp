@@ -4,7 +4,7 @@ struct HomeStatsStrip: View {
     private let stats: [(String, String)] = [
         ("100+", "Associazioni"),
         ("312", "Comitati"),
-        ("16 giu", "3° Festival dell'umano tutto intero"),
+        ("16 giu", "3° Festival"),
     ]
 
     var body: some View {

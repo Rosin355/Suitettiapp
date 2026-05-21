@@ -104,4 +104,5 @@ private struct HomeReferendumCTA: View {
         HomeView(selectedTab: .constant(.home))
     }
     .environment(ArticleStore(service: StubEditorialService()))
+    .environment(EventStore(service: StubEventService()))
 }
