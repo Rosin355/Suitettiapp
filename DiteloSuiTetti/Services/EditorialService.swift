@@ -75,8 +75,8 @@ private extension ArticleDTO {
     func toArticle() -> Article {
         let index = Int(id.uuid.0) % articlePalette.count
         let (categoryColor, thumbnailColors) = articlePalette[index]
-        let words = estratto.split(separator: " ").count
-        let readMinutes = max(1, Int(ceil(Double(words) / 40.0)))
+        let bodyWords = contenuto.split(separator: " ").count
+        let readMinutes = max(1, Int(ceil(Double(bodyWords) / 200.0)))
         return Article(
             id: id,
             slug: slug,
@@ -88,6 +88,7 @@ private extension ArticleDTO {
             fullDate: fullDateFormatter.string(from: dataPubblicazione),
             readTime: "\(readMinutes) min",
             excerpt: estratto,
+            body: contenuto,
             imageURL: immagineUrl.flatMap { URL(string: $0) }
         )
     }

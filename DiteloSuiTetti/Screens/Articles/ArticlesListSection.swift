@@ -24,11 +24,14 @@ struct ArticlesListSection: View {
                 .fill(.white.opacity(0.8))
                 .frame(height: 1)
 
-            ForEach(filtered.enumerated(), id: \.element.id) { index, article in
-                ArticleListRow(
-                    article: article,
-                    isLast: index == filtered.count - 1
-                )
+            ForEach(Array(filtered.enumerated()), id: \.element.id) { index, article in
+                NavigationLink(destination: ArticleDetailView(article: article)) {
+                    ArticleListRow(
+                        article: article,
+                        isLast: index == filtered.count - 1
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
         .background(.white.opacity(0.82))

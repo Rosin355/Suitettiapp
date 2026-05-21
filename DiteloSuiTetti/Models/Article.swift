@@ -11,6 +11,7 @@ struct Article: Identifiable {
     let fullDate: String
     let readTime: String
     let excerpt: String
+    let body: String
     let imageURL: URL?
 
     init(
@@ -24,6 +25,7 @@ struct Article: Identifiable {
         fullDate: String,
         readTime: String,
         excerpt: String = "",
+        body: String = "",
         imageURL: URL? = nil
     ) {
         self.id = id
@@ -36,6 +38,7 @@ struct Article: Identifiable {
         self.fullDate = fullDate
         self.readTime = readTime
         self.excerpt = excerpt
+        self.body = body
         self.imageURL = imageURL
     }
 }

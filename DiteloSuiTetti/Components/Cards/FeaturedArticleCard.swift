@@ -6,11 +6,18 @@ struct FeaturedArticleCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .bottomLeading) {
+                RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
+                    .frame(height: 108)
+                    .clipped()
+                    .accessibilityHidden(true)
+
+                // subtle gradient so the chip remains readable over bright images
                 LinearGradient(
-                    colors: article.thumbnailColors,
-                    startPoint: .topLeading, endPoint: .bottomTrailing
+                    colors: [.clear, .black.opacity(0.35)],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
-                .frame(height: 108)
+                .frame(height: 54)
 
                 CategoryChip(text: article.category, color: article.categoryColor)
                     .padding(10)

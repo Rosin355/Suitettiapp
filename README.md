@@ -6,12 +6,24 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v0.3.0** — Live backend integration complete  
+**v0.4.0** — Article Detail View  
 *Last updated: 21 May 2026*
 
 ---
 
 ## Changelog
+
+### v0.4.0 — Article Detail View (21 May 2026)
+- `ArticleDetailView` — full-bleed hero image (400 pt), dark gradient overlay, title + category chip over image
+- Floating glass back button (`@Environment(\.dismiss)`) and `ShareLink` share button; both use `.glassEffect(.regular.interactive(), in: .circle)`
+- System navigation bar hidden; custom floating controls replace it
+- `RemoteImageView` — reusable `AsyncImage` wrapper with `ProgressView` while loading, branded gradient fallback on error or missing URL
+- `HTMLTextFormatter.plainText(from:)` — strips HTML tags, decodes common entities (including Italian accented characters), collapses blank lines
+- `Article.body` field added (mapped from `contenuto` DTO field)
+- Read-time calculation updated: body word count at 200 wpm (was excerpt at 40 wpm)
+- `FeaturedArticleCard` and `ArticleListRow` both use `RemoteImageView`; gradient fallback via `article.thumbnailColors`
+- `HomeFeaturedArticlesSection` — `NavigationLink → ArticleDetailView` (was tab-switch button)
+- `ArticlesListSection` — each row wrapped in `NavigationLink → ArticleDetailView`
 
 ### v0.3.0 — Live Backend Integration (21 May 2026)
 - Connected to live `sync-editorial` Supabase edge function via `APIClient`
@@ -64,7 +76,7 @@ Italian citizens interested in civic participation, local governance, and commun
 | Live sync from `sync-editorial` backend | ✅ Done |
 | Pull-to-refresh | ✅ Done |
 | Support / Sostieni screen | ✅ Done |
-| Article detail view | 🔲 Next |
+| Article detail view | ✅ Done |
 | Event detail view | 🔲 Next |
 | Delta sync (since timestamp) | 🔲 Next |
 | Push notifications | 🔲 Backlog |
@@ -117,11 +129,13 @@ DiteloSuiTetti/
 ├── Components/
 │   ├── Cards/
 │   │   ├── GCard.swift               # Generic glass card container
-│   │   └── FeaturedArticleCard.swift # Horizontal-scroll article card
+│   │   └── FeaturedArticleCard.swift # Horizontal-scroll article card (RemoteImageView)
 │   ├── Rows/
-│   │   └── ArticleListRow.swift      # Article list row with thumbnail + metadata
+│   │   └── ArticleListRow.swift      # Article list row with thumbnail (RemoteImageView)
 │   ├── Chips/
 │   │   └── CategoryChip.swift        # Pill-shaped category label
+│   ├── Common/
+│   │   └── RemoteImageView.swift     # AsyncImage wrapper; branded gradient fallback
 │   ├── Headers/
 │   │   ├── HomeTopBar.swift          # Scroll-reactive floating nav bar
 │   │   └── SectionHeader.swift       # Section title + optional action link
@@ -137,12 +151,14 @@ DiteloSuiTetti/
 │   ├── Articles/
 │   │   ├── ArticoliView.swift        # Article browser; loading/error/empty states; pull-to-refresh
 │   │   ├── ArticlesFilterBar.swift   # Category filter pill bar
-│   │   └── ArticlesListSection.swift # Featured card + paginated article list
+│   │   ├── ArticlesListSection.swift # Featured card + paginated article list; NavigationLink rows
+│   │   └── ArticleDetailView.swift   # Full editorial detail; hero image, body text, glass controls
 │   └── Support/
 │       ├── SosteniView.swift         # Support screen root
 │       ├── SupportHeroSection.swift  # Hero with donation prompt
 │       └── SupportActionsSection.swift  # Ways to help, copy-link, social share
 ├── Utilities/
+│   ├── HTMLTextFormatter.swift       # Strips HTML tags, decodes entities → plain String
 │   ├── DateFormatting.swift
 │   └── ViewModifiers.swift
 ├── ContentView.swift                 # TabView root; injects ArticleStore environment value

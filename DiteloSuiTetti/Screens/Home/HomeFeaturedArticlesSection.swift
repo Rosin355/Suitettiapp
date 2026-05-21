@@ -13,9 +13,7 @@ struct HomeFeaturedArticlesSection: View {
                 ScrollView(.horizontal) {
                     HStack(spacing: 12) {
                         ForEach(store.articles.prefix(3)) { article in
-                            Button {
-                                selectedTab = .articoli
-                            } label: {
+                            NavigationLink(destination: ArticleDetailView(article: article)) {
                                 FeaturedArticleCard(article: article)
                             }
                             .buttonStyle(.plain)

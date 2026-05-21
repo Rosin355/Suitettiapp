@@ -48,7 +48,7 @@ private struct HomeQuoteSection: View {
                     .foregroundStyle(.brandBlack)
                     .lineSpacing(4)
 
-                Text("Comitati Civici · 2026")
+                Text("Sui tetti · 2026")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.brandGray)
                     .padding(.top, 12)

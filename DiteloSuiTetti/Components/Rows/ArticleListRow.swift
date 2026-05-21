@@ -7,13 +7,11 @@ struct ArticleListRow: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 14) {
-                LinearGradient(
-                    colors: article.thumbnailColors,
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                )
-                .frame(width: 58, height: 58)
-                .clipShape(.rect(cornerRadius: 14))
-                .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
+                RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
+                    .frame(width: 58, height: 58)
+                    .clipShape(.rect(cornerRadius: 14))
+                    .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 5) {
                     CategoryChip(text: article.category, color: article.categoryColor,
