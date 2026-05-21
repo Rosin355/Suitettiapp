@@ -6,12 +6,26 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v0.4.0** — Article Detail View  
+**v0.5.0** — Document Detail View & PDF Reader  
 *Last updated: 21 May 2026*
 
 ---
 
 ## Changelog
+
+### v0.5.0 — Document Detail View & PDF Reader (21 May 2026)
+- `Document` UI model — id, title, slug, type, category, description, url, uploadedAt, updatedAt, syncVersion
+- `DocumentDTO` expanded with full backend fields (`tipo`, `categoria`, `descrizione`, `url`, `dataCaricamento`)
+- `DocumentServiceProtocol` — `StubDocumentService` (fixtures) and `LiveDocumentService` (real API, same endpoint as articles)
+- `DocumentStore` — `@MainActor @Observable`, mirrors `ArticleStore` pattern with load/refresh/error states
+- `PDFDownloadService` — `actor`; downloads remote PDF to `temporaryDirectory`, validates HTTP status + MIME type, deduplicates concurrent requests for the same URL via in-flight task cache
+- `PDFKitView` — `UIViewRepresentable` wrapping `PDFView`; single-page-continuous vertical scrolling, auto-scales, pinch-zoom supported natively
+- `PDFReaderView` — downloads PDF on appear, loading/error/retry states, `ShareLink` for local file in toolbar
+- `DocumentDetailView` — type/category chips, metadata card (uploaded date, category, type), HTML-decoded description, "Leggi PDF" primary CTA (→ `PDFReaderView`), "Apri esternamente" + share secondary CTAs; graceful "PDF non disponibile" state when url is nil
+- `DocumentListRow` — doc icon tile, title, type + date, chevron; follows `ArticleListRow` pattern
+- `DocumentiView` — loading/error/empty/list states, pull-to-refresh, `NavigationLink → DocumentDetailView`
+- `DocumentStore` injected at app root; `DocumentiView` available as screen for future tab navigation
+- `Document.all` fixture data added to `PreviewData.swift`
 
 ### v0.4.0 — Article Detail View (21 May 2026)
 - `ArticleDetailView` — full-bleed hero image (400 pt), dark gradient overlay, title + category chip over image
@@ -77,6 +91,7 @@ Italian citizens interested in civic participation, local governance, and commun
 | Pull-to-refresh | ✅ Done |
 | Support / Sostieni screen | ✅ Done |
 | Article detail view | ✅ Done |
+| Document detail view + PDF reader | ✅ Done |
 | Event detail view | 🔲 Next |
 | Delta sync (since timestamp) | 🔲 Next |
 | Push notifications | 🔲 Backlog |

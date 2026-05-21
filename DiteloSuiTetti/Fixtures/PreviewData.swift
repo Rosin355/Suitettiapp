@@ -54,3 +54,44 @@ extension Article {
 
     static let categories = ["Tutto", "Famiglia", "Educazione", "Sussidiarietà", "Bene Comune"]
 }
+
+extension Document {
+    static let all: [Document] = [
+        Document(
+            id: UUID(),
+            title: "Statuto dell'Associazione Comitati Civici",
+            slug: "statuto-comitati-civici",
+            type: "Statuto",
+            category: "Documenti Legali",
+            description: "Testo integrale dello statuto dell'associazione, approvato dall'assemblea fondativa.",
+            url: nil,
+            uploadedAt: "10 gen 2026",
+            updatedAt: Date(),
+            syncVersion: 1
+        ),
+        Document(
+            id: UUID(),
+            title: "Relazione annuale sull'attività civica 2025",
+            slug: "relazione-annuale-2025",
+            type: "Relazione",
+            category: "Report",
+            description: "Sintesi delle iniziative promosse nel corso del 2025 sul territorio italiano.",
+            url: nil,
+            uploadedAt: "15 feb 2026",
+            updatedAt: Date(),
+            syncVersion: 1
+        ),
+        Document(
+            id: UUID(),
+            title: "Proposta di legge sull'iniziativa civica",
+            slug: "proposta-legge-iniziativa-civica",
+            type: "Proposta",
+            category: "Legislazione",
+            description: "Testo della proposta elaborata dai comitati in materia di partecipazione democratica.",
+            url: nil,
+            uploadedAt: "3 mar 2026",
+            updatedAt: Date(),
+            syncVersion: 1
+        ),
+    ]
+}

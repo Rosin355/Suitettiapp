@@ -30,4 +30,5 @@ struct ContentView: View {
 #Preview {
     ContentView()
         .environment(ArticleStore(service: StubEditorialService()))
+        .environment(DocumentStore(service: StubDocumentService()))
 }
