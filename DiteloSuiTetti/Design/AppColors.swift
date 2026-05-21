@@ -19,4 +19,5 @@ extension ShapeStyle where Self == Color {
     static var brandBlack:       Color { .init(red: 26/255,  green: 26/255,  blue: 26/255) }
     static var brandGray:        Color { .init(red: 94/255,  green: 94/255,  blue: 94/255) }
     static var brandGrayLight:   Color { .init(red: 160/255, green: 160/255, blue: 160/255) }
+    static var brandSep:         Color { .black.opacity(0.08) }
 }
