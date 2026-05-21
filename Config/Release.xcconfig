@@ -1,0 +1,7 @@
+// Release build configuration
+// Assign this file in Xcode: Project → Info → Configurations → Release → DiteloSuiTetti
+//
+// #include "Secrets.xcconfig"   // Uncomment once Secrets.xcconfig is populated
+
+API_BASE_URL = https://kbswgeliohnpwopzzzpc.supabase.co
+WEBSITE_URL  = https://comitaticivici.it
