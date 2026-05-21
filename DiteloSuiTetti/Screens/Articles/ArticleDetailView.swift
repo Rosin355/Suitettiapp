@@ -8,54 +8,29 @@ struct ArticleDetailView: View {
         HTMLTextFormatter.plainText(from: article.body)
     }
 
+    // Don't repeat the excerpt if the body already opens with the same text
+    private var shouldShowExcerpt: Bool {
+        guard !article.excerpt.isEmpty else { return false }
+        let trimmedBody = plainBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedExcerpt = article.excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmedBody.hasPrefix(trimmedExcerpt)
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 heroSection
                 contentSection
             }
+            .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)
         .ignoresSafeArea(edges: .top)
         .background(.brandCream)
         .toolbar(.hidden, for: .navigationBar)
-    }
-
-    // MARK: - Hero
-
-    private var heroSection: some View {
-        ZStack(alignment: .bottom) {
-            RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
-                .frame(maxWidth: .infinity)
-                .frame(height: 400)
-                .clipped()
-                .accessibilityHidden(true)
-
-            // Dark gradient — ensures title is always legible
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.72)],
-                startPoint: UnitPoint(x: 0.5, y: 0.3),
-                endPoint: .bottom
-            )
-
-            // Category + title pinned to the bottom of the hero
-            VStack(alignment: .leading, spacing: 10) {
-                CategoryChip(text: article.category, color: .white, background: .white.opacity(0.18))
-                Text(article.title)
-                    .font(.system(size: 22, weight: .black))
-                    .foregroundStyle(.white)
-                    .kerning(-0.5)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 28)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(height: 400)
-        // Floating back + share buttons sit at the very top, inside safe area
+        // Buttons live OUTSIDE the scroll content so they stay fixed to the screen
         .overlay(alignment: .top) {
-            HStack {
+            HStack(alignment: .top) {
                 backButton
                 Spacer()
                 shareButton
@@ -64,6 +39,41 @@ struct ArticleDetailView: View {
             .padding(.top, 8)
             .safeAreaPadding(.top)
         }
+    }
+
+    // MARK: - Hero
+
+    private var heroSection: some View {
+        RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
+            .frame(maxWidth: .infinity)
+            .frame(height: 400)
+            .clipped()
+            .accessibilityHidden(true)
+            // Using .overlay keeps the content properly constrained to the image width
+            .overlay(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 10) {
+                    CategoryChip(
+                        text: article.category,
+                        color: .white,
+                        background: .white.opacity(0.18)
+                    )
+                    Text(article.title)
+                        .font(.system(size: 22, weight: .black))
+                        .foregroundStyle(.white)
+                        .kerning(-0.5)
+                        .lineSpacing(3)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 28)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.75)],
+                        startPoint: UnitPoint(x: 0.5, y: 0),
+                        endPoint: .bottom
+                    )
+                )
+            }
     }
 
     // MARK: - Content
@@ -80,7 +90,7 @@ struct ArticleDetailView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
 
-            if !article.excerpt.isEmpty {
+            if shouldShowExcerpt {
                 Text(article.excerpt)
                     .font(.system(size: 16).italic())
                     .foregroundStyle(.brandGray)
@@ -95,12 +105,21 @@ struct ArticleDetailView: View {
                     .foregroundStyle(.brandBlack)
                     .lineSpacing(7)
                     .padding(.horizontal, 20)
-                    .padding(.top, article.excerpt.isEmpty ? 20 : 16)
+                    .padding(.top, shouldShowExcerpt ? 16 : 20)
+                    .padding(.bottom, 48)
+            } else if !article.excerpt.isEmpty {
+                Text(article.excerpt)
+                    .font(.system(size: 17))
+                    .foregroundStyle(.brandBlack)
+                    .lineSpacing(7)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
                     .padding(.bottom, 48)
             } else {
                 Color.clear.frame(height: 48)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var metadataRow: some View {
@@ -108,8 +127,7 @@ struct ArticleDetailView: View {
             Image(systemName: "calendar")
                 .font(.system(size: 11))
             Text(article.fullDate)
-            Circle()
-                .frame(width: 3, height: 3)
+            Circle().frame(width: 3, height: 3)
             Image(systemName: "clock")
                 .font(.system(size: 11))
             Text(article.readTime + " di lettura")
