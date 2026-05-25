@@ -6,12 +6,22 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v0.6.0** — Event Detail View & Calendar Integration  
-*Last updated: 21 May 2026*
+**v0.7.0** — Event Parsing & Filtering Improvements  
+*Last updated: 25 May 2026*
 
 ---
 
 ## Changelog
+
+### v0.7.0 — Event Parsing & Filtering Improvements (25 May 2026)
+- `Event.isUpcoming` fixed — undated events (nil `rawDate`) now return `false` instead of `true`; previously they were silently bucketed as upcoming
+- `Event.isPast` and `Event.isUndated` computed properties added
+- `EventStore.pastEvents` — filtered descending by date; `EventStore.undatedEvents` — stable order
+- `EventDateParser.parseDate` extended with fallback formats: `yyyy-MM-dd` (primary), ISO datetime with offset, ISO datetime fractional, `dd/MM/yyyy`
+- `EventDateParser.parseTime` now strips `"ore "` prefix before parsing (common in Italian event data)
+- `EventiView` — segmented filter (Prossimi / Passati / Tutti); smart empty state on "Prossimi" offers a direct switch to "Passati" when past events exist; all three buckets navigable to `EventDetailView`
+- `HomeEventsSection` — always visible; gentle "Nessun evento in programma." text replaces the invisible empty section
+- `#if DEBUG` logging in `EventService.toEvent()` (per-event parse failure) and `LiveEventService.fetchAll()` (totals: upcoming / past / undated counts)
 
 ### v0.6.0 — Event Detail View & Calendar Integration (21 May 2026)
 - `Event` UI model — id, title, slug, type, day, monthShort, fullDate, time, location, description, link, imageURL, rawDate, isUpcoming
@@ -107,6 +117,7 @@ Italian citizens interested in civic participation, local governance, and commun
 | Article detail view | ✅ Done |
 | Document detail view + PDF reader | ✅ Done |
 | Event detail view + calendar save | ✅ Done |
+| Event filtering (upcoming / past / all) | ✅ Done |
 | Delta sync (since timestamp) | 🔲 Next |
 | Push notifications | 🔲 Backlog |
 | Offline reading (SwiftData cache) | 🔲 Backlog |

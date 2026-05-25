@@ -18,7 +18,14 @@ struct Event: Identifiable {
     let syncVersion: Int
 
     var isUpcoming: Bool {
-        guard let raw = rawDate else { return true }
+        guard let raw = rawDate else { return false }
         return raw >= Calendar.current.startOfDay(for: Date())
     }
+
+    var isPast: Bool {
+        guard let raw = rawDate else { return false }
+        return raw < Calendar.current.startOfDay(for: Date())
+    }
+
+    var isUndated: Bool { rawDate == nil }
 }

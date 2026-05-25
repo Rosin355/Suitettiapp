@@ -15,6 +15,16 @@ final class EventStore {
             .sorted { ($0.rawDate ?? .distantFuture) < ($1.rawDate ?? .distantFuture) }
     }
 
+    var pastEvents: [Event] {
+        events
+            .filter { $0.isPast }
+            .sorted { ($0.rawDate ?? .distantPast) > ($1.rawDate ?? .distantPast) }
+    }
+
+    var undatedEvents: [Event] {
+        events.filter { $0.isUndated }
+    }
+
     private let service: any EventServiceProtocol
 
     init(service: any EventServiceProtocol = LiveEventService()) {

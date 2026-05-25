@@ -17,7 +17,14 @@ struct StubEventService: EventServiceProtocol {
 struct LiveEventService: EventServiceProtocol {
     func fetchAll() async throws -> [Event] {
         let response: EditorialSyncResponseDTO = try await APIClient.fetch(AppEnvironment.syncEditorialEndpoint)
-        return response.events.map { $0.toEvent() }
+        let mapped = response.events.map { $0.toEvent() }
+        #if DEBUG
+        let upcoming = mapped.filter(\.isUpcoming).count
+        let past     = mapped.filter(\.isPast).count
+        let undated  = mapped.filter(\.isUndated).count
+        print("[EventStore] decoded \(mapped.count) events — upcoming: \(upcoming), past: \(past), undated: \(undated)")
+        #endif
+        return mapped
     }
 }
 
@@ -31,6 +38,12 @@ private extension EventDTO {
         let dispTime   = ora.trimmingCharacters(in: .whitespaces).isEmpty
                             ? "" : EventDateParser.displayTime(ora)
         let rawDate    = EventDateParser.combinedDate(dateString: dataEvento, timeString: ora)
+
+        #if DEBUG
+        if rawDate == nil {
+            print("[EventService] ⚠️ Date parse failed — title: \(titolo), dataEvento: \(dataEvento), ora: \(ora)")
+        }
+        #endif
 
         return Event(
             id:          id,

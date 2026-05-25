@@ -8,25 +8,31 @@ struct HomeEventsSection: View {
     }
 
     var body: some View {
-        if !featured.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                // Custom header — NavigationLink replaces the plain-closure SectionHeader
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Prossimi eventi")
-                        .font(.system(size: 19, weight: .bold))
-                        .foregroundStyle(.brandBlack)
-                    Spacer()
-                    NavigationLink("Tutti →") {
-                        EventiView()
-                            .navigationTitle("Eventi")
-                    }
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.brandRed)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Prossimi eventi")
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(.brandBlack)
+                Spacer()
+                NavigationLink("Tutti →") {
+                    EventiView()
+                        .navigationTitle("Eventi")
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
-                .padding(.bottom, 10)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.brandRed)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 10)
 
+            if featured.isEmpty {
+                Text("Nessun evento in programma.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.brandGray)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, DT.padding)
+            } else {
                 GCard {
                     VStack(spacing: 0) {
                         ForEach(Array(featured.enumerated()), id: \.element.id) { index, event in

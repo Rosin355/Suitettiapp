@@ -1,7 +1,22 @@
 import SwiftUI
 
+private enum EventFilter: String, CaseIterable {
+    case upcoming = "Prossimi"
+    case past     = "Passati"
+    case all      = "Tutti"
+}
+
 struct EventiView: View {
     @Environment(EventStore.self) private var store
+    @State private var filter: EventFilter = .upcoming
+
+    private var filteredEvents: [Event] {
+        switch filter {
+        case .upcoming: return store.upcomingEvents
+        case .past:     return store.pastEvents
+        case .all:      return store.upcomingEvents + store.pastEvents + store.undatedEvents
+        }
+    }
 
     var body: some View {
         Group {
@@ -9,15 +24,33 @@ struct EventiView: View {
                 loadingView
             } else if let message = store.errorMessage {
                 errorView(message: message)
-            } else if store.upcomingEvents.isEmpty {
-                emptyView
             } else {
-                eventList
+                VStack(spacing: 0) {
+                    filterBar
+                    if filteredEvents.isEmpty {
+                        emptyView
+                    } else {
+                        eventList
+                    }
+                }
             }
         }
         .background(.brandCream)
         .task { await store.load() }
         .refreshable { await store.refresh() }
+    }
+
+    // MARK: - Filter bar
+
+    private var filterBar: some View {
+        Picker("Filtro", selection: $filter) {
+            ForEach(EventFilter.allCases, id: \.self) { f in
+                Text(f.rawValue).tag(f)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, DT.padding)
+        .padding(.vertical, 12)
     }
 
     // MARK: - List
@@ -29,15 +62,14 @@ struct EventiView: View {
                     .fill(.white.opacity(0.8))
                     .frame(height: 1)
 
-                let events = store.upcomingEvents
-                ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                ForEach(Array(filteredEvents.enumerated()), id: \.element.id) { index, event in
                     NavigationLink(destination: EventDetailView(event: event)) {
                         EventRow(
                             day:    event.day,
                             month:  event.monthShort,
                             title:  event.title,
                             place:  placeText(event),
-                            isLast: index == events.count - 1
+                            isLast: index == filteredEvents.count - 1
                         )
                     }
                     .buttonStyle(.plain)
@@ -91,9 +123,21 @@ struct EventiView: View {
             Image(systemName: "calendar")
                 .font(.system(size: 40))
                 .foregroundStyle(.brandGrayLight)
-            Text("Nessun evento in programma.")
-                .font(.system(size: 15))
-                .foregroundStyle(.brandGray)
+            if filter == .upcoming && !store.pastEvents.isEmpty {
+                Text("Nessun evento futuro.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.brandGray)
+                Button("Consulta gli eventi passati") {
+                    filter = .past
+                }
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.brandRed)
+                .padding(.top, 4)
+            } else {
+                Text("Nessun evento in programma.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.brandGray)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

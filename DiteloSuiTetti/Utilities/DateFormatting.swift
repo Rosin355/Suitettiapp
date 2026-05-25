@@ -4,9 +4,13 @@ import Foundation
 
 enum EventDateParser {
 
-    // "2026-06-07" → Date? representing midnight Rome time
+    // "2026-06-07" → Date? representing midnight Rome time; tries multiple formats
     static func parseDate(_ string: String) -> Date? {
-        isoDateFormatter.date(from: string.trimmingCharacters(in: .whitespaces))
+        let trimmed = string.trimmingCharacters(in: .whitespaces)
+        for formatter in dateFormatters {
+            if let d = formatter.date(from: trimmed) { return d }
+        }
+        return nil
     }
 
     // "2026-06-07" → "07"
@@ -42,11 +46,13 @@ enum EventDateParser {
         return cal.date(from: comps)
     }
 
-    // Parse flexible time strings: "10:00", "10:00:00", "10.00" → Date (reference day)
+    // Parse flexible time strings: "ore 10:00", "10:00", "10:00:00", "10.00" → Date (reference day)
     static func parseTime(_ string: String) -> Date? {
-        let cleaned = string
-            .trimmingCharacters(in: .whitespaces)
-            .replacingOccurrences(of: ".", with: ":")
+        var cleaned = string.trimmingCharacters(in: .whitespaces)
+        if cleaned.lowercased().hasPrefix("ore ") {
+            cleaned = String(cleaned.dropFirst(4))
+        }
+        cleaned = cleaned.replacingOccurrences(of: ".", with: ":")
         for formatter in timeFormatters {
             if let d = formatter.date(from: cleaned) { return d }
         }
@@ -63,12 +69,19 @@ enum EventDateParser {
 
     // MARK: - Private formatters (created once, reused)
 
-    private static let isoDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "Europe/Rome") ?? .current
-        return f
+    private static let dateFormatters: [DateFormatter] = {
+        let rome = TimeZone(identifier: "Europe/Rome") ?? .current
+        let posix = Locale(identifier: "en_US_POSIX")
+        return ["yyyy-MM-dd",
+                "yyyy-MM-dd'T'HH:mm:ssZ",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+                "dd/MM/yyyy"].map { fmt in
+            let f = DateFormatter()
+            f.dateFormat = fmt
+            f.locale = posix
+            f.timeZone = rome
+            return f
+        }
     }()
 
     private static let italianMonthShort: DateFormatter = {
