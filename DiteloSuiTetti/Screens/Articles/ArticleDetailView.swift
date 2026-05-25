@@ -55,11 +55,11 @@ struct ArticleDetailView: View {
             .accessibilityHidden(true)
             .overlay(alignment: .bottom) {
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.55), .black.opacity(0.88)],
+                    colors: [.clear, .black.opacity(0.65), .black.opacity(0.92)],
                     startPoint: UnitPoint(x: 0.5, y: 0),
                     endPoint: .bottom
                 )
-                .frame(height: 260)
+                .frame(height: 280)
             }
             .overlay(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 10) {
@@ -73,8 +73,11 @@ struct ArticleDetailView: View {
                         .foregroundStyle(.white)
                         .kerning(-0.4)
                         .lineSpacing(2)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                         .lineLimit(5)
                         .minimumScaleFactor(0.82)
+                        .shadow(color: .black.opacity(0.45), radius: 4, x: 0, y: 1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 24)
@@ -191,9 +194,35 @@ struct ArticleDetailView: View {
     }
 }
 
-#Preview {
+#Preview("Short title") {
+    NavigationStack {
+        ArticleDetailView(article: Article(
+            category: "Bene Comune",
+            categoryColor: .brandRed,
+            thumbnailColors: [.brandRed],
+            title: "Sussidiarietà",
+            date: "14 mag", fullDate: "14 mag 2026", readTime: "2 min"
+        ))
+    }
+    .environment(ArticleStore(service: StubEditorialService()))
+}
+
+#Preview("Medium title") {
     NavigationStack {
         ArticleDetailView(article: Article.all[0])
+    }
+    .environment(ArticleStore(service: StubEditorialService()))
+}
+
+#Preview("Long title") {
+    NavigationStack {
+        ArticleDetailView(article: Article(
+            category: "Referendum",
+            categoryColor: .brandRed,
+            thumbnailColors: [.brandRed],
+            title: "Referendum sulla riforma della giustizia: le ragioni del sì e le conseguenze per le famiglie italiane",
+            date: "20 mag", fullDate: "20 mag 2026", readTime: "8 min"
+        ))
     }
     .environment(ArticleStore(service: StubEditorialService()))
 }
