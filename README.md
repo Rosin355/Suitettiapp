@@ -6,12 +6,22 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v0.8.0** — Central Editorial Sync Coordinator  
+**v0.9.0** — APIClient Hardening  
 *Last updated: 25 May 2026*
 
 ---
 
 ## Changelog
+
+### v0.9.0 — APIClient Hardening (25 May 2026)
+- `URLRequest` with 20 s timeout, `Accept: application/json`, `User-Agent: DiteloSuiTetti-iOS/1.0`
+- 8 typed `APIError` cases with Italian `localizedDescription` strings: `invalidResponse`, `badStatus(code:message:)`, `emptyResponse`, `decodingFailed`, `transportFailed`, `timedOut`, `offline`, `cancelled`
+- 2-retry exponential backoff (0.5 s → 1.0 s) for transient failures: 5xx, timeout, offline; no retry on 4xx, decoding errors, or cancellation
+- `URLError` classified into `.offline` / `.timedOut` / `.cancelled` / `.transportFailed`
+- Server error body decoded from JSON (`error`, `message`, `details` fields) or UTF-8 and surfaced in `badStatus` message
+- Task cancellation respected at every await point — throws `.cancelled`, never retries
+- `#if DEBUG` request/response/retry logging: `▶ GET …`, `← 200 (N bytes)`, `↺ retry N/2 in Xs`
+- Public `APIClient.fetch(_:as:)` signature unchanged — zero call-site changes
 
 ### v0.8.0 — Central Editorial Sync Coordinator (25 May 2026)
 - `EditorialSyncCoordinator` — single `sync-editorial` network request at launch; maps all three content types and returns `EditorialSyncPayload`; eliminates the previous 3 duplicate HTTP requests
@@ -278,6 +288,20 @@ The app works out of the box with hardcoded fallback URLs in `AppEnvironment.swi
 
 ### Secrets
 Copy `Config/Secrets.xcconfig` if you need to add a Supabase anon key in a future version. This file is gitignored.
+
+---
+
+## Testing TODO
+
+No test target exists yet. When one is added, `APIClient` unit tests should cover:
+
+- `2xx` → decoding success, no retry
+- `4xx` → `badStatus`, no retry
+- `5xx` → `badStatus`, retried up to 2×
+- Offline (`notConnectedToInternet`) → `.offline`, retried up to 2×
+- Timeout (`URLError.timedOut`) → `.timedOut`, retried up to 2×
+- Decoding failure → `.decodingFailed`, no retry
+- Task cancellation → `.cancelled`, no retry, thrown immediately
 
 ---
 
