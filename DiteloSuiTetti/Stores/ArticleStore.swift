@@ -51,4 +51,24 @@ final class ArticleStore {
             errorMessage = error.localizedDescription
         }
     }
+
+    // MARK: - Coordinator support
+
+    func beginLoading() {
+        guard !isLoading, !isRefreshing else { return }
+        isLoading = true
+        errorMessage = nil
+    }
+
+    func replace(with articles: [Article]) {
+        self.articles = articles
+        isLoading = false
+        isRefreshing = false
+    }
+
+    func failedLoading(message: String) {
+        errorMessage = message
+        isLoading = false
+        isRefreshing = false
+    }
 }

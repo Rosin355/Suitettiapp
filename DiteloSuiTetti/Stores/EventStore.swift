@@ -54,4 +54,24 @@ final class EventStore {
             errorMessage = error.localizedDescription
         }
     }
+
+    // MARK: - Coordinator support
+
+    func beginLoading() {
+        guard !isLoading, !isRefreshing else { return }
+        isLoading = true
+        errorMessage = nil
+    }
+
+    func replace(with events: [Event]) {
+        self.events = events
+        isLoading = false
+        isRefreshing = false
+    }
+
+    func failedLoading(message: String) {
+        errorMessage = message
+        isLoading = false
+        isRefreshing = false
+    }
 }

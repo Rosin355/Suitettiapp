@@ -6,12 +6,22 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v0.7.1** — Production-Readiness Configuration  
+**v0.8.0** — Central Editorial Sync Coordinator  
 *Last updated: 25 May 2026*
 
 ---
 
 ## Changelog
+
+### v0.8.0 — Central Editorial Sync Coordinator (25 May 2026)
+- `EditorialSyncCoordinator` — single `sync-editorial` network request at launch; maps all three content types and returns `EditorialSyncPayload`; eliminates the previous 3 duplicate HTTP requests
+- `EditorialSyncPayload` — lightweight value type carrying `[Article]`, `[Event]`, `[Document]`, `serverTime: Date`
+- `ArticleMapper`, `EventMapper`, `DocumentMapper` — DTO→UI model mapping extracted from service files into dedicated `Mappers/` files as `internal extension` on DTO types; no mapping logic is duplicated
+- `ArticleStore`, `EventStore`, `DocumentStore` — added `beginLoading()`, `replace(with:)`, `failedLoading(message:)` coordinator-support methods; existing `load()` / `refresh()` unchanged
+- `EditorialService`, `EventService`, `DocumentService` — mapping blocks removed; stubs and live services unchanged
+- `DiteloSuiTettiApp` — single `coordinator.syncAll()` call replaces three `async let` store loads; all stores show loading state immediately; error state distributed to all stores on failure
+- Debug logging consolidated in coordinator: `▶ sync started`, `✓ sync succeeded` with counts, event bucket breakdown, `✗ sync failed`
+- Pull-to-refresh continues to use individual store `refresh()` methods (3 separate requests on user action — acceptable; coordinator injection is a future improvement)
 
 ### v0.7.1 — Production-Readiness Configuration (25 May 2026)
 - `DocumentStore.load()` added to concurrent app-launch task (was missing — Documenti tab always opened empty)

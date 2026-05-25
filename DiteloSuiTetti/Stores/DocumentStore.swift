@@ -38,4 +38,24 @@ final class DocumentStore {
             errorMessage = error.localizedDescription
         }
     }
+
+    // MARK: - Coordinator support
+
+    func beginLoading() {
+        guard !isLoading, !isRefreshing else { return }
+        isLoading = true
+        errorMessage = nil
+    }
+
+    func replace(with documents: [Document]) {
+        self.documents = documents
+        isLoading = false
+        isRefreshing = false
+    }
+
+    func failedLoading(message: String) {
+        errorMessage = message
+        isLoading = false
+        isRefreshing = false
+    }
 }

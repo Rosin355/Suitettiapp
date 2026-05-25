@@ -17,50 +17,6 @@ struct StubEventService: EventServiceProtocol {
 struct LiveEventService: EventServiceProtocol {
     func fetchAll() async throws -> [Event] {
         let response: EditorialSyncResponseDTO = try await APIClient.fetch(AppEnvironment.syncEditorialEndpoint)
-        let mapped = response.events.map { $0.toEvent() }
-        #if DEBUG
-        let upcoming = mapped.filter(\.isUpcoming).count
-        let past     = mapped.filter(\.isPast).count
-        let undated  = mapped.filter(\.isUndated).count
-        print("[EventStore] decoded \(mapped.count) events — upcoming: \(upcoming), past: \(past), undated: \(undated)")
-        #endif
-        return mapped
-    }
-}
-
-// MARK: - Mapping
-
-private extension EventDTO {
-    func toEvent() -> Event {
-        let day        = EventDateParser.dayString(from: dataEvento)
-        let month      = EventDateParser.monthShort(from: dataEvento)
-        let full       = EventDateParser.fullDate(from: dataEvento)
-        let dispTime   = ora.trimmingCharacters(in: .whitespaces).isEmpty
-                            ? "" : EventDateParser.displayTime(ora)
-        let rawDate    = EventDateParser.combinedDate(dateString: dataEvento, timeString: ora)
-
-        #if DEBUG
-        if rawDate == nil {
-            print("[EventService] ⚠️ Date parse failed — title: \(titolo), dataEvento: \(dataEvento), ora: \(ora)")
-        }
-        #endif
-
-        return Event(
-            id:          id,
-            title:       titolo,
-            slug:        slug,
-            type:        tipo,
-            day:         day.isEmpty   ? "--" : day,
-            monthShort:  month.isEmpty ? "---" : month,
-            fullDate:    full.isEmpty  ? dataEvento : full,
-            time:        dispTime,
-            location:    luogo,
-            description: descrizione,
-            link:        link.flatMap { URL(string: $0) },
-            imageURL:    immagineUrl.flatMap { URL(string: $0) },
-            rawDate:     rawDate,
-            updatedAt:   updatedAt,
-            syncVersion: syncVersion
-        )
+        return response.events.map { $0.toEvent() }
     }
 }
