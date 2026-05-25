@@ -6,12 +6,17 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v0.7.0** — Event Parsing & Filtering Improvements  
+**v0.7.1** — Production-Readiness Configuration  
 *Last updated: 25 May 2026*
 
 ---
 
 ## Changelog
+
+### v0.7.1 — Production-Readiness Configuration (25 May 2026)
+- `DocumentStore.load()` added to concurrent app-launch task (was missing — Documenti tab always opened empty)
+- `NSCalendarsFullAccessUsageDescription` added to generated Info.plist build settings (required for EventKit on iOS 17+; both Debug and Release configurations)
+- `docs/APP_STORE_OWNERSHIP.md` — bundle ID, team ID, Digital Yogin publication strategy, App Store Transfer checklist, capabilities to avoid before transfer
 
 ### v0.7.0 — Event Parsing & Filtering Improvements (25 May 2026)
 - `Event.isUpcoming` fixed — undated events (nil `rawDate`) now return `false` instead of `true`; previously they were silently bucketed as upcoming

@@ -22,7 +22,8 @@ struct DiteloSuiTettiApp: App {
                 .task {
                     async let articles: () = store.load()
                     async let events: () = eventStore.load()
-                    _ = await (articles, events)
+                    async let documents: () = documentStore.load()
+                    _ = await (articles, events, documents)
                 }
         }
     }
