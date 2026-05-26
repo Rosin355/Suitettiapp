@@ -8,6 +8,13 @@ struct ArticleDetailView: View {
         HTMLTextFormatter.plainText(from: article.body)
     }
 
+    private var heroTitle: String {
+        article.title
+            .replacingOccurrences(of: "\\n", with: " ")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     // Suppress excerpt when the body already opens with the same text (common CMS pattern)
     private var shouldShowExcerpt: Bool {
         guard !article.excerpt.isEmpty else { return false }
@@ -48,42 +55,14 @@ struct ArticleDetailView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
-        RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
-            .frame(maxWidth: .infinity)
-            .frame(height: 400)
-            .clipped()
-            .accessibilityHidden(true)
-            .overlay(alignment: .bottom) {
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.65), .black.opacity(0.92)],
-                    startPoint: UnitPoint(x: 0.5, y: 0),
-                    endPoint: .bottom
-                )
-                .frame(height: 280)
-            }
-            .overlay(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 10) {
-                    CategoryChip(
-                        text: article.category,
-                        color: .white,
-                        background: .white.opacity(0.2)
-                    )
-                    Text(article.title)
-                        .font(.system(size: 20, weight: .black))
-                        .foregroundStyle(.white)
-                        .kerning(-0.4)
-                        .lineSpacing(2)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .lineLimit(5)
-                        .minimumScaleFactor(0.82)
-                        .shadow(color: .black.opacity(0.45), radius: 4, x: 0, y: 1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 28)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+        DetailHeroView(
+            imageURL: article.imageURL,
+            fallbackColors: article.thumbnailColors,
+            label: article.category,
+            title: heroTitle,
+            height: 430,
+            maxTitleLines: 4
+        )
     }
 
     // MARK: - Content
@@ -214,14 +193,14 @@ struct ArticleDetailView: View {
     .environment(ArticleStore(service: StubEditorialService()))
 }
 
-#Preview("Long title") {
+#Preview("Long title (real)") {
     NavigationStack {
         ArticleDetailView(article: Article(
-            category: "Referendum",
+            category: "Non autosufficienza",
             categoryColor: .brandRed,
             thumbnailColors: [.brandRed],
-            title: "Referendum sulla riforma della giustizia: le ragioni del sì e le conseguenze per le famiglie italiane",
-            date: "20 mag", fullDate: "20 mag 2026", readTime: "8 min"
+            title: "Non autosufficienza, Napolitano (Sui Tetti): con i 3 miliardi per i più fragili dal vice ministro Bellucci iniziativa strategica",
+            date: "20 mag", fullDate: "20 mag 2026", readTime: "5 min"
         ))
     }
     .environment(ArticleStore(service: StubEditorialService()))

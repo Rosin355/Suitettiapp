@@ -78,37 +78,14 @@ struct EventDetailView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
-        RemoteImageView(url: event.imageURL, fallbackColors: heroColors)
-            .frame(maxWidth: .infinity)
-            .frame(height: 380)
-            .clipped()
-            .accessibilityHidden(true)
-            .overlay(alignment: .bottom) {
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.5), .black.opacity(0.85)],
-                    startPoint: UnitPoint(x: 0.5, y: 0),
-                    endPoint: .bottom
-                )
-                .frame(height: 240)
-            }
-            .overlay(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 10) {
-                    if !event.type.isEmpty {
-                        CategoryChip(text: event.type, color: .white, background: .white.opacity(0.2))
-                    }
-                    Text(event.title)
-                        .font(.system(size: 20, weight: .black))
-                        .foregroundStyle(.white)
-                        .kerning(-0.4)
-                        .lineSpacing(2)
-                        .lineLimit(4)
-                        .minimumScaleFactor(0.82)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 28)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+        DetailHeroView(
+            imageURL: event.imageURL,
+            fallbackColors: heroColors,
+            label: event.type.isEmpty ? "Evento" : event.type,
+            title: event.title,
+            height: 410,
+            maxTitleLines: 3
+        )
     }
 
     // MARK: - Content
