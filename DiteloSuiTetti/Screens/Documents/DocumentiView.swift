@@ -13,6 +13,7 @@ struct DocumentiView: View {
                 emptyView
             } else {
                 documentList
+                    .appearAnimation()
             }
         }
         .task { await store.load() }
@@ -43,7 +44,7 @@ struct DocumentiView: View {
                     NavigationLink(destination: DocumentDetailView(document: doc)) {
                         DocumentListRow(document: doc, isLast: index == store.documents.count - 1)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableCardStyle())
                 }
             }
             .background(.white.opacity(0.82))
@@ -60,14 +61,11 @@ struct DocumentiView: View {
     }
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
-            Text("Caricamento documenti…")
-                .font(.system(size: 15))
-                .foregroundStyle(.brandGray)
+        ScrollView {
+            SkeletonLoadingList()
+                .padding(.top, 16)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .scrollIndicators(.hidden)
     }
 
     private func errorView(message: String) -> some View {

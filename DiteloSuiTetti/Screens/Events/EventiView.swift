@@ -33,6 +33,7 @@ struct EventiView: View {
                         eventList
                     }
                 }
+                .appearAnimation()
             }
         }
         .background(.brandCream)
@@ -83,7 +84,7 @@ struct EventiView: View {
                             isLast: index == filteredEvents.count - 1
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableCardStyle())
                 }
             }
             .background(.white.opacity(0.82))
@@ -103,13 +104,11 @@ struct EventiView: View {
     // MARK: - States
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView().scaleEffect(1.2)
-            Text("Caricamento eventi…")
-                .font(.system(size: 15))
-                .foregroundStyle(.brandGray)
+        ScrollView {
+            SkeletonLoadingList()
+                .padding(.top, 16)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .scrollIndicators(.hidden)
     }
 
     private func errorView(message: String) -> some View {

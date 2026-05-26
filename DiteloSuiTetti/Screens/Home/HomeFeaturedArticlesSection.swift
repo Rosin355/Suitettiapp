@@ -16,7 +16,7 @@ struct HomeFeaturedArticlesSection: View {
                             NavigationLink(destination: ArticleDetailView(article: article)) {
                                 FeaturedArticleCard(article: article)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressableCardStyle())
                         }
                     }
                     .padding(.horizontal, DT.padding)
@@ -24,6 +24,7 @@ struct HomeFeaturedArticlesSection: View {
                 }
                 .scrollIndicators(.hidden)
             }
+            .appearAnimation(delay: 0.1)
         }
     }
 }

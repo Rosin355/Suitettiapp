@@ -13,9 +13,12 @@ struct ArticoliView: View {
     var body: some View {
         Group {
             if store.isLoading && store.articles.isEmpty {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(.brandCream)
+                ScrollView {
+                    SkeletonLoadingList()
+                        .padding(.top, 16)
+                }
+                .scrollIndicators(.hidden)
+                .background(.brandCream)
             } else if let errorMessage = store.errorMessage, store.articles.isEmpty {
                 ContentUnavailableView {
                     Label("Errore di caricamento", systemImage: "exclamationmark.triangle")
@@ -59,6 +62,7 @@ struct ArticoliView: View {
                 .scrollIndicators(.hidden)
                 .background(.brandCream)
                 .refreshable { await store.refresh() }
+                .appearAnimation()
             }
         }
         .navigationBarTitleDisplayMode(.large)

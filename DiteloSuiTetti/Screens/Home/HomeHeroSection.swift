@@ -4,14 +4,7 @@ struct HomeHeroSection: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
-                Circle()
-                    .fill(.white.opacity(0.07))
-                    .frame(width: 240, height: 240)
-                    .offset(x: 160, y: -70)
-                Circle()
-                    .fill(.black.opacity(0.05))
-                    .frame(width: 160, height: 160)
-                    .offset(x: -40, y: 60)
+                BokehCirclesBackground()
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text("PER IL BENE COMUNE")

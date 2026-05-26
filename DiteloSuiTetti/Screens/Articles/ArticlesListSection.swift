@@ -31,7 +31,7 @@ struct ArticlesListSection: View {
                         isLast: index == filtered.count - 1
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableCardStyle())
             }
         }
         .background(.white.opacity(0.82))

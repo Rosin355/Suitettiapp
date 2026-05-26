@@ -82,6 +82,7 @@ private struct CopyLinkButton: View {
                 .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
                 .animation(.easeInOut(duration: 0.2), value: copied)
         }
+        .sensoryFeedback(.impact(weight: .light, intensity: 0.8), trigger: copied) { _, new in new }
     }
 }
 

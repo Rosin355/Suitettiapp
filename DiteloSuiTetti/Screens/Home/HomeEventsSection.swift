@@ -45,7 +45,7 @@ struct HomeEventsSection: View {
                                     isLast: index == featured.count - 1
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressableCardStyle())
                         }
                     }
                 }
@@ -53,6 +53,7 @@ struct HomeEventsSection: View {
                 .padding(.bottom, 12)
             }
         }
+        .appearAnimation(delay: 0.2)
     }
 
     private func placeText(_ event: Event) -> String {

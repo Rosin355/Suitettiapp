@@ -186,6 +186,7 @@ struct EventDetailView: View {
             .tint(.brandRed)
             .controlSize(.large)
             .accessibilityLabel("Aggiungi questo evento al tuo calendario")
+            .sensoryFeedback(.success, trigger: showCalendarSuccess)
 
             if let link = event.link {
                 Link(destination: link) {
