@@ -274,20 +274,12 @@ private struct OnboardingSlide1: View {
     }
 
     private var logoMark: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
-                .frame(width: 64, height: 64)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(.white.opacity(0.35), lineWidth: 0.5)
-                }
-                .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
-            OnboardingLogoIcon()
-                .frame(width: 30, height: 30)
-                .foregroundStyle(.white)
-        }
+        Image(uiImage: UIImage(named: "AppIcon") ?? UIImage())
+            .resizable()
+            .scaledToFit()
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .shadow(color: .black.opacity(0.18), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -360,71 +352,6 @@ private struct OnboardingSlide2: View {
                 "Insieme per il bene comune. " +
                 "Tre giorni di incontri, idee e testimonianze per costruire una società più giusta, solidale e sussidiaria. " +
                 "Ti aspettiamo."
-            )
-        }
-    }
-}
-
-// MARK: - Logo icon (SVG faithfully reproduced)
-
-private struct OnboardingLogoIcon: View {
-    var body: some View {
-        Canvas { ctx, size in
-            let s = min(size.width, size.height) / 30
-
-            // Vertical + curved arm going to top-right
-            ctx.stroke(
-                Path { p in
-                    p.move(to: CGPoint(x: 7*s, y: 22*s))
-                    p.addLine(to: CGPoint(x: 7*s, y: 12*s))
-                    p.addCurve(
-                        to: CGPoint(x: 14*s, y: 5*s),
-                        control1: CGPoint(x: 7*s, y: 8.134*s),
-                        control2: CGPoint(x: 10.134*s, y: 5*s)
-                    )
-                    p.addLine(to: CGPoint(x: 23*s, y: 5*s))
-                },
-                with: .foreground,
-                style: StrokeStyle(lineWidth: 2.4*s, lineCap: .round, lineJoin: .round)
-            )
-
-            // Circle at base of arm
-            ctx.fill(
-                Path(ellipseIn: CGRect(
-                    x: (7 - 3.5)*s, y: (25 - 3.5)*s,
-                    width: 7*s, height: 7*s
-                )),
-                with: .foreground
-            )
-
-            // Bottom horizontal bar
-            ctx.stroke(
-                Path { p in
-                    p.move(to: CGPoint(x: 12*s, y: 25*s))
-                    p.addLine(to: CGPoint(x: 23*s, y: 25*s))
-                },
-                with: .foreground,
-                style: StrokeStyle(lineWidth: 2.4*s, lineCap: .round)
-            )
-
-            // Center vertical bar
-            ctx.stroke(
-                Path { p in
-                    p.move(to: CGPoint(x: 17.5*s, y: 25*s))
-                    p.addLine(to: CGPoint(x: 17.5*s, y: 18*s))
-                },
-                with: .foreground,
-                style: StrokeStyle(lineWidth: 2.4*s, lineCap: .round)
-            )
-
-            // Top horizontal bar
-            ctx.stroke(
-                Path { p in
-                    p.move(to: CGPoint(x: 23*s, y: 18*s))
-                    p.addLine(to: CGPoint(x: 12*s, y: 18*s))
-                },
-                with: .foreground,
-                style: StrokeStyle(lineWidth: 2.4*s, lineCap: .round)
             )
         }
     }

@@ -6,12 +6,18 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v1.6.0** — Local Notifications MVP  
+**v1.6.1** — Local Notifications Hardening  
 *Last updated: 26 May 2026*
 
 ---
 
 ## Changelog
+
+### v1.6.1 — Local Notifications Hardening (26 May 2026)
+- `LocalNotificationManager` — notification IDs are now marked as sent only after `center.add(_:)` succeeds; previously IDs were persisted before the OS confirmed scheduling, which could silently suppress future attempts for the same content item
+- `LocalNotificationManager` — `schedule()` now uses explicit `do/catch`; scheduling failures are logged in `DEBUG` builds (`▶ LocalNotificationManager: failed to schedule '<id>' — <reason>`) instead of being silently swallowed by `try?`
+- `LocalNotificationManager.canScheduleNotifications(status:)` — scheduling now permits `.authorized`, `.provisional`, and `.ephemeral` authorization statuses; previously only `.authorized` was accepted, which blocked provisional grants (common on first install)
+- Onboarding gate — `.provisional` is now treated as an already-answered permission state; tapping "Inizia →" skips `NotificationPermissionView` and enters `ContentView` directly when status is `.authorized`, `.provisional`, `.denied`, or `.ephemeral`
 
 ### v1.6.0 — Local Notifications MVP (26 May 2026)
 - `NotificationPermissionView` — custom permission pre-prompt shown between onboarding and ContentView; cream gradient background, `bell.badge.fill` icon, 3 feature cards (articles/events/documents), "Abilita notifiche" primary CTA, "Non ora" secondary; triggers the system permission prompt only when user confirms; skipped if permission already answered
