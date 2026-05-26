@@ -6,12 +6,36 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v0.9.0** — APIClient Hardening  
-*Last updated: 25 May 2026*
+**v1.4.1** — Visual Polish & Micro-Interactions  
+*Last updated: 26 May 2026*
 
 ---
 
 ## Changelog
+
+### v1.4.1 — Visual Polish & Micro-Interactions (26 May 2026)
+- `BokehCirclesBackground` — fixed invisible bokeh circles in `HomeHeroSection`; root cause: absolute pixel offsets placed circles outside the ZStack bounds (clipped by `.clipped()`), opacity 0.05–0.16 was below the visual threshold on brand red, and blur 24–55 dissolved circles into noise; fixed with `GeometryReader` + relative positioning (`relX`/`relY` fractions), opacity raised to 0.13–0.22, blur reduced to 14–30
+- `BokehCirclesBackground.debugMode` — `static let debugMode = false`; flip to `true` to render circles at 2.5× opacity with yellow `strokeBorder` outlines for dev verification; zero runtime cost when `false`
+- `BokehCirclesBackground` Reduce Motion — when system "Reduce Motion" is enabled, circles render as static shapes at their base positions with no animation
+- `PressableCardStyle` — `ButtonStyle` applying 0.98 scale spring on press for all `NavigationLink` cards across articles, events, documents, and home sections; disabled when Reduce Motion is on
+- `AppearModifier` + `.appearAnimation(delay:)` — fade + 12 pt y-offset appear animation applied at section level (never per-row) to home sections, article/event/document lists; Reduce Motion aware
+- `SkeletonLoadingList` — shimmer skeleton loading state replaces `ProgressView` in `ArticoliView`, `EventiView`, `DocumentiView`; shimmer driven by `LinearGradient` phase animation
+- Haptic feedback — `.sensoryFeedback(.impact(weight: .light, intensity: 0.8))` on copy-link button in `SupportActionsSection`; `.sensoryFeedback(.success)` on calendar save in `EventDetailView`
+
+### v1.3.0 — SwiftData Offline Cache (26 May 2026)
+- `CachedArticle`, `CachedEvent`, `CachedDocument` — `@Model` classes persisting all editorial content to SwiftData; `Color` recomputed on load from `articleColorPalette` (not stored); `eventDescription`/`documentDescription` naming avoids NSObject `.description` collision
+- `EditorialCacheRepository` — `@MainActor` self-contained `ModelContainer`; `loadPayload()` returns `EditorialSyncPayload?` (nil if cache empty); `clearAndReplace(with:)` batch-replaces all three entity types
+- Cache-first launch — if cache exists: stores populate immediately with no spinner; network sync runs in background and silently replaces content; if network fails with cache present: non-blocking `offlineMessage` banner shown; if network fails with no cache: existing error state
+- `offlineMessage: String?` — new property on `ArticleStore`, `EventStore`, `DocumentStore`; shown as a non-blocking `wifi.slash` banner below the offline condition; cleared on successful sync
+- Offline banner — `ArticoliView`, `EventiView`, `DocumentiView` each show a non-blocking `wifi.slash` banner when `store.offlineMessage` is set
+- `articleColorPalette` — extracted to `Utilities/ArticleColorPalette.swift`; shared between `ArticleMapper` and `CachedArticle.toArticle()`
+
+### v1.2.0 — Shared Detail Layout (26 May 2026)
+- `DetailHeroImage` — reusable full-bleed hero: `AsyncImage` with branded gradient fallback, configurable height, dark gradient overlay for text legibility; used by `ArticleDetailView` and `EventDetailView`
+- `DetailTitleCard` — reusable floating title card: configurable label chip color, semibold serif title, clips to card shape with subtle shadow
+
+### v1.0.0 — Shared Detail Hero Foundation (25 May 2026)
+- Introduced shared `ZStack`-based hero layout foundation reused across `ArticleDetailView`, `EventDetailView`, and `DocumentDetailView`
 
 ### v0.9.0 — APIClient Hardening (25 May 2026)
 - `URLRequest` with 20 s timeout, `Accept: application/json`, `User-Agent: DiteloSuiTetti-iOS/1.0`
@@ -145,7 +169,7 @@ Italian citizens interested in civic participation, local governance, and commun
 | Event filtering (upcoming / past / all) | ✅ Done |
 | Delta sync (since timestamp) | 🔲 Next |
 | Push notifications | 🔲 Backlog |
-| Offline reading (SwiftData cache) | 🔲 Backlog |
+| Offline reading (SwiftData cache) | ✅ Done |
 | Authentication / user accounts | 🔲 Backlog |
 
 ### Design Principles
