@@ -6,12 +6,28 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v1.4.1** — Visual Polish & Micro-Interactions  
+**v1.5.1** — Onboarding Visual Alignment & Animated Bokeh  
 *Last updated: 26 May 2026*
 
 ---
 
 ## Changelog
+
+### v1.5.1 — Onboarding Visual Alignment & Animated Bokeh (26 May 2026)
+- Slides reordered to match reference: **Slide 0** = cream mission, **Slide 1** = red brand hero, **Slide 2** = dark festival
+- Slide 2 content replaced: referendum copy → **Sui Tetti Festival 2026** (badge, title, Georgia italic subtitle, body, closing "Ti aspettiamo. ♡")
+- `OnboardingBokehBackground` — new reusable component in `Components/Effects/`; `enum OnboardingBokehTheme { case cream, red, dark }` controls per-slide circle palettes; dark theme uses `.blendMode(.screen)` for luminous festival glow; cream theme uses subtle warm glows that stay behind pillar cards; same `GeometryReader` + relative positioning + `withAnimation` idiom as `BokehCirclesBackground`; `static let debugMode = false` flip for dev verification
+- All 3 onboarding slides: static `GeometryReader` orbs removed, replaced with `OnboardingBokehBackground(theme:)` — circles now animate on all slides
+- `OnboardingBokehTuning` constants (×1.45 opacity, ×1.65 movement, ×0.75 blur) ensure bokeh visibility on OLED devices
+- Reduce Motion: all themes render static circles at boosted opacity (no movement) when system Reduce Motion is enabled
+- Per-slide dot/CTA/skip styling updated: dots brandRed on cream (slide 0), white on red/dark; CTA frosted glass on red slide, solid brandRed on cream and dark; skip button gray on cream, white-translucent on red
+- Haptic feedback on "Avanti" / "Inizia" taps via `.sensoryFeedback(.selection, trigger:)`
+- Slide content appear animation: `.easeOut` fade + 16 pt y-offset lift on each slide's first appearance
+
+### v1.5.0 — Onboarding Screen (26 May 2026)
+- 3-slide onboarding (red hero → cream mission → dark referendum) with `TabView(.page)` paging, frosted glass CTA, expanding dot indicator, skip button
+- `@AppStorage("hasSeenOnboarding")` gate in `DiteloSuiTettiApp` — first launch shows onboarding, subsequent launches go directly to `ContentView`; `.easeInOut(duration: 0.4)` cross-fade transition between states
+- `OnboardingLogoIcon` — `Canvas`-drawn custom SVG logo mark used in the red hero slide
 
 ### v1.4.1 — Visual Polish & Micro-Interactions (26 May 2026)
 - `BokehCirclesBackground` — fixed invisible bokeh circles in `HomeHeroSection`; root cause: absolute pixel offsets placed circles outside the ZStack bounds (clipped by `.clipped()`), opacity 0.05–0.16 was below the visual threshold on brand red, and blur 24–55 dissolved circles into noise; fixed with `GeometryReader` + relative positioning (`relX`/`relY` fractions), opacity raised to 0.13–0.22, blur reduced to 14–30

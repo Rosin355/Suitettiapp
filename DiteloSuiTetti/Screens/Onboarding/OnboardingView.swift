@@ -5,8 +5,9 @@ import SwiftUI
 struct OnboardingView: View {
     let onComplete: () -> Void
 
-    @State private var currentSlide = 0
-    private let totalSlides = 3
+    @State private var currentSlide   = 0
+    @State private var hapticTrigger  = 0
+    private let totalSlides           = 3
 
     var body: some View {
         ZStack {
@@ -28,8 +29,8 @@ struct OnboardingView: View {
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(
                                 currentSlide == 0
-                                    ? Color.white.opacity(0.6)
-                                    : Color.brandGrayLight
+                                    ? Color.brandGrayLight
+                                    : Color.white.opacity(0.6)
                             )
                             .padding(.trailing, 20)
                             .padding(.top, 8)
@@ -76,6 +77,7 @@ struct OnboardingView: View {
 
     private var ctaButton: some View {
         Button {
+            hapticTrigger += 1
             if currentSlide < totalSlides - 1 {
                 currentSlide += 1
             } else {
@@ -85,114 +87,38 @@ struct OnboardingView: View {
             Text(currentSlide < totalSlides - 1 ? "Avanti" : "Inizia →")
                 .font(.system(size: 17, weight: .bold))
                 .kerning(-0.4)
-                .foregroundStyle(currentSlide == 0 ? Color.brandRed : .white)
+                .foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .background {
                     ZStack {
-                        // Slide 0: frosted glass pill
+                        // Slide 1 (red): frosted glass pill
                         Capsule()
                             .fill(.ultraThinMaterial)
                             .environment(\.colorScheme, .dark)
                             .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
-                            .opacity(currentSlide == 0 ? 1 : 0)
-                        // Slides 1–2: solid red pill
+                            .opacity(currentSlide == 1 ? 1 : 0)
+                        // Slides 0 + 2: solid red pill
                         Capsule()
                             .fill(Color.brandRed)
                             .shadow(color: .brandRed.opacity(0.28), radius: 10, x: 0, y: 4)
-                            .opacity(currentSlide == 0 ? 0 : 1)
+                            .opacity(currentSlide == 1 ? 0 : 1)
                     }
                 }
         }
         .animation(.easeInOut(duration: 0.2), value: currentSlide)
+        .sensoryFeedback(.selection, trigger: hapticTrigger)
         .accessibilityLabel(currentSlide < totalSlides - 1 ? "Avanti" : "Inizia")
     }
 
     private var dotColor: Color {
-        currentSlide == 1 ? .brandRed : .white
+        currentSlide == 0 ? .brandRed : .white
     }
 }
 
-// MARK: - Slide 0: Brand hero (red)
+// MARK: - Slide 0: Mission pillars (cream)
 
 private struct OnboardingSlide0: View {
-    var body: some View {
-        ZStack {
-            Color.brandRed.ignoresSafeArea()
-            orbs
-            content
-        }
-    }
-
-    private var orbs: some View {
-        GeometryReader { geo in
-            // Large orb — top-right, partially off-screen
-            Circle()
-                .fill(.white.opacity(0.06))
-                .frame(width: 300, height: 300)
-                .position(x: geo.size.width - 90, y: 60)
-            // Small orb — bottom-left, partially off-screen
-            Circle()
-                .fill(.black.opacity(0.05))
-                .frame(width: 160, height: 160)
-                .position(x: 40, y: geo.size.height - 140)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-    }
-
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            logoMark
-                .padding(.bottom, 38)
-                .accessibilityHidden(true)
-
-            Text("Ditelo")
-                .font(.system(size: 74, weight: .black))
-                .foregroundStyle(.white)
-                .kerning(-3)
-
-            Text("sui Tetti.")
-                .font(Font.custom("Georgia", size: 70).italic())
-                .foregroundStyle(.brandYellowLight)
-                .kerning(-2)
-                .padding(.bottom, 30)
-
-            Text("La voce civica per la vita, la famiglia e l'educazione.")
-                .font(.system(size: 17))
-                .foregroundStyle(.white.opacity(0.7))
-                .lineSpacing(6)
-                .frame(maxWidth: 280, alignment: .leading)
-        }
-        .padding(.horizontal, 28)
-        .safeAreaPadding(.top)
-        .padding(.top, 50)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Ditelo sui Tetti. La voce civica per la vita, la famiglia e l'educazione.")
-    }
-
-    private var logoMark: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
-                .frame(width: 64, height: 64)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(.white.opacity(0.35), lineWidth: 0.5)
-                }
-                .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
-            OnboardingLogoIcon()
-                .frame(width: 30, height: 30)
-                .foregroundStyle(.white)
-        }
-    }
-}
-
-// MARK: - Slide 1: Mission pillars (cream)
-
-private struct OnboardingSlide1: View {
     private let pillars: [(color: Color, icon: String, title: String, detail: String)] = [
         (
             .brandRed, "heart.fill", "Famiglia",
@@ -208,9 +134,12 @@ private struct OnboardingSlide1: View {
         ),
     ]
 
+    @State private var appeared = false
+
     var body: some View {
         ZStack {
             Color.brandCream.ignoresSafeArea()
+            OnboardingBokehBackground(theme: .cream)
 
             VStack(alignment: .leading, spacing: 0) {
                 Text("Chi siamo")
@@ -230,10 +159,10 @@ private struct OnboardingSlide1: View {
                 VStack(spacing: 10) {
                     ForEach(pillars.indices, id: \.self) { i in
                         OnboardingPillarCard(
-                            color:   pillars[i].color,
-                            icon:    pillars[i].icon,
-                            title:   pillars[i].title,
-                            detail:  pillars[i].detail
+                            color:  pillars[i].color,
+                            icon:   pillars[i].icon,
+                            title:  pillars[i].title,
+                            detail: pillars[i].detail
                         )
                     }
                 }
@@ -242,6 +171,10 @@ private struct OnboardingSlide1: View {
             .safeAreaPadding(.top)
             .padding(.top, 36)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 16)
+            .animation(.easeOut(duration: 0.35).delay(0.05), value: appeared)
+            .onAppear { appeared = true }
         }
     }
 }
@@ -292,77 +225,140 @@ private struct OnboardingPillarCard: View {
     }
 }
 
-// MARK: - Slide 2: Referendum (dark)
+// MARK: - Slide 1: Brand hero (red)
+
+private struct OnboardingSlide1: View {
+    @State private var appeared = false
+
+    var body: some View {
+        ZStack {
+            Color.brandRed.ignoresSafeArea()
+            OnboardingBokehBackground(theme: .red)
+
+            VStack(alignment: .leading, spacing: 0) {
+                logoMark
+                    .padding(.bottom, 38)
+                    .accessibilityHidden(true)
+
+                Text("Ditelo")
+                    .font(.system(size: 74, weight: .black))
+                    .foregroundStyle(.white)
+                    .kerning(-3)
+
+                Text("sui Tetti.")
+                    .font(Font.custom("Georgia", size: 70).italic())
+                    .foregroundStyle(.brandYellowLight)
+                    .kerning(-2)
+                    .padding(.bottom, 30)
+
+                Text("La voce civica per la vita, la famiglia e l'educazione.")
+                    .font(.system(size: 17))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineSpacing(6)
+                    .frame(maxWidth: 280, alignment: .leading)
+            }
+            .padding(.horizontal, 28)
+            .safeAreaPadding(.top)
+            .padding(.top, 50)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 16)
+            .animation(.easeOut(duration: 0.35).delay(0.05), value: appeared)
+            .onAppear { appeared = true }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Ditelo sui Tetti. La voce civica per la vita, la famiglia e l'educazione.")
+        }
+    }
+
+    private var logoMark: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .environment(\.colorScheme, .dark)
+                .frame(width: 64, height: 64)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(.white.opacity(0.35), lineWidth: 0.5)
+                }
+                .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+            OnboardingLogoIcon()
+                .frame(width: 30, height: 30)
+                .foregroundStyle(.white)
+        }
+    }
+}
+
+// MARK: - Slide 2: Festival (dark)
 
 private struct OnboardingSlide2: View {
+    @State private var appeared = false
+
     var body: some View {
         ZStack {
             Color(red: 26/255, green: 26/255, blue: 26/255).ignoresSafeArea()
-            orbs
-            content
+            OnboardingBokehBackground(theme: .dark)
+
+            VStack(alignment: .leading, spacing: 0) {
+                // Badge
+                Text("3° FESTIVAL")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.brandBlack)
+                    .kerning(0.8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(.brandYellow.opacity(0.9))
+                    .clipShape(Capsule())
+                    .padding(.bottom, 22)
+
+                // Title
+                Text("SUI TETTI")
+                    .font(.system(size: 48, weight: .black))
+                    .foregroundStyle(.white)
+                    .kerning(-2)
+                Text("FESTIVAL 2026")
+                    .font(.system(size: 48, weight: .black))
+                    .foregroundStyle(.white)
+                    .kerning(-2)
+                    .padding(.bottom, 16)
+
+                // Italic gold subtitle
+                Text("Insieme per il bene\ncomune.")
+                    .font(Font.custom("Georgia", size: 26).italic())
+                    .foregroundStyle(.brandYellowLight)
+                    .kerning(-0.5)
+                    .lineSpacing(5)
+                    .padding(.bottom, 22)
+
+                // Body
+                Text("Tre giorni di incontri, idee e testimonianze per costruire una società più giusta, solidale e sussidiaria.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.white.opacity(0.56))
+                    .lineSpacing(6)
+                    .kerning(-0.2)
+                    .frame(maxWidth: 300, alignment: .leading)
+
+                // Closing
+                Text("Ti aspettiamo. ♡")
+                    .font(Font.custom("Georgia", size: 17).italic())
+                    .foregroundStyle(.white.opacity(0.70))
+                    .padding(.top, 14)
+            }
+            .padding(.horizontal, 28)
+            .safeAreaPadding(.top)
+            .padding(.top, 46)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 16)
+            .animation(.easeOut(duration: 0.35).delay(0.05), value: appeared)
+            .onAppear { appeared = true }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "3° Festival. Sui Tetti Festival 2026. " +
+                "Insieme per il bene comune. " +
+                "Tre giorni di incontri, idee e testimonianze per costruire una società più giusta, solidale e sussidiaria. " +
+                "Ti aspettiamo."
+            )
         }
-    }
-
-    private var orbs: some View {
-        GeometryReader { geo in
-            Circle()
-                .fill(Color.brandRed.opacity(0.10))
-                .frame(width: 240, height: 240)
-                .position(x: geo.size.width - 70, y: 60)
-            Circle()
-                .fill(Color.brandRed.opacity(0.06))
-                .frame(width: 160, height: 160)
-                .position(x: 50, y: geo.size.height - 140)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-    }
-
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("REFERENDUM · 12 GIU 2026")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.brandRed)
-                .kerning(0.3)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 4)
-                .background(.brandRed.opacity(0.18))
-                .clipShape(Capsule())
-                .padding(.bottom, 22)
-
-            Text("Separazione")
-                .font(.system(size: 52, weight: .black))
-                .foregroundStyle(.white)
-                .kerning(-2)
-
-            Text("delle carriere.")
-                .font(.system(size: 52, weight: .black))
-                .foregroundStyle(.white)
-                .kerning(-2)
-                .padding(.bottom, 12)
-
-            Text("Vota Sì.")
-                .font(Font.custom("Georgia", size: 28).italic())
-                .foregroundStyle(.brandRed)
-                .kerning(-0.5)
-                .padding(.bottom, 24)
-
-            Text("Una riforma per una magistratura più indipendente e processi più equi per tutti.")
-                .font(.system(size: 16))
-                .foregroundStyle(.white.opacity(0.56))
-                .lineSpacing(6)
-                .kerning(-0.2)
-                .frame(maxWidth: 290, alignment: .leading)
-        }
-        .padding(.horizontal, 28)
-        .safeAreaPadding(.top)
-        .padding(.top, 46)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "Referendum, 12 giugno 2026. Separazione delle carriere. Vota Sì. " +
-            "Una riforma per una magistratura più indipendente e processi più equi per tutti."
-        )
     }
 }
 
@@ -433,14 +429,14 @@ private struct OnboardingLogoIcon: View {
 
 // MARK: - Previews
 
-#Preview("Slide 0") {
+#Preview("Slide 0 — Mission") {
     OnboardingView(onComplete: {})
 }
 
-#Preview("Slide 1") {
+#Preview("Slide 1 — Brand") {
     OnboardingView(onComplete: {})
 }
 
-#Preview("Slide 2") {
+#Preview("Slide 2 — Festival") {
     OnboardingView(onComplete: {})
 }
