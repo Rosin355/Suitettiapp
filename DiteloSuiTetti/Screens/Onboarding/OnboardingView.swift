@@ -208,7 +208,10 @@ private struct OnboardingPillarCard: View {
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background {
