@@ -34,6 +34,17 @@ struct ArticoliView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
+                        if let msg = store.offlineMessage {
+                            HStack(spacing: 6) {
+                                Image(systemName: "wifi.slash").font(.system(size: 12))
+                                Text(msg).font(.system(size: 13))
+                            }
+                            .foregroundStyle(.brandGray)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                            .padding(.bottom, 4)
+                        }
+
                         ArticlesFilterBar(selectedCategory: $selectedCategory,
                                          categories: store.categories)
                             .padding(.top, 4)

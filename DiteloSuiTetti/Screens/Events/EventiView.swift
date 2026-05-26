@@ -58,6 +58,17 @@ struct EventiView: View {
     private var eventList: some View {
         ScrollView {
             VStack(spacing: 0) {
+                if let msg = store.offlineMessage {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wifi.slash").font(.system(size: 12))
+                        Text(msg).font(.system(size: 13))
+                    }
+                    .foregroundStyle(.brandGray)
+                    .padding(.horizontal, DT.padding)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+                }
+
                 Rectangle()
                     .fill(.white.opacity(0.8))
                     .frame(height: 1)

@@ -8,6 +8,7 @@ final class DocumentStore {
     private(set) var isLoading = false
     private(set) var isRefreshing = false
     private(set) var errorMessage: String?
+    private(set) var offlineMessage: String?
 
     private let service: any DocumentServiceProtocol
 
@@ -51,11 +52,16 @@ final class DocumentStore {
         self.documents = documents
         isLoading = false
         isRefreshing = false
+        offlineMessage = nil
     }
 
     func failedLoading(message: String) {
         errorMessage = message
         isLoading = false
         isRefreshing = false
+    }
+
+    func setOfflineWarning() {
+        offlineMessage = "Contenuto non aggiornato — verifica la connessione."
     }
 }

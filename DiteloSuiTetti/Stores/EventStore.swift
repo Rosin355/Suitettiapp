@@ -8,6 +8,7 @@ final class EventStore {
     private(set) var isLoading = false
     private(set) var isRefreshing = false
     private(set) var errorMessage: String?
+    private(set) var offlineMessage: String?
 
     var upcomingEvents: [Event] {
         events
@@ -67,11 +68,16 @@ final class EventStore {
         self.events = events
         isLoading = false
         isRefreshing = false
+        offlineMessage = nil
     }
 
     func failedLoading(message: String) {
         errorMessage = message
         isLoading = false
         isRefreshing = false
+    }
+
+    func setOfflineWarning() {
+        offlineMessage = "Contenuto non aggiornato — verifica la connessione."
     }
 }

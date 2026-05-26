@@ -31,7 +31,7 @@ struct DetailTitleCard<Metadata: View>: View {
                 )
             }
             Text(title)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 28, weight: .semibold, design: .serif))
                 .foregroundStyle(.brandBlack)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
