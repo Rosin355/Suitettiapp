@@ -6,12 +6,23 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v1.5.1** — Onboarding Visual Alignment & Animated Bokeh  
+**v1.6.0** — Local Notifications MVP  
 *Last updated: 26 May 2026*
 
 ---
 
 ## Changelog
+
+### v1.6.0 — Local Notifications MVP (26 May 2026)
+- `NotificationPermissionView` — custom permission pre-prompt shown between onboarding and ContentView; cream gradient background, `bell.badge.fill` icon, 3 feature cards (articles/events/documents), "Abilita notifiche" primary CTA, "Non ora" secondary; triggers the system permission prompt only when user confirms; skipped if permission already answered
+- `LocalNotificationManager` — `@MainActor` singleton; checks `UNAuthorizationStatus` before scheduling; deterministic notification IDs (`article.<uuid>`, `event.<uuid>`, `document.<uuid>`); `sentLocalNotificationIDs` in UserDefaults prevents duplicate notifications; `UNTimeIntervalNotificationTrigger(timeInterval: 1)` for immediate local delivery
+- `NewContentDetector` — compares previous vs fresh `EditorialSyncPayload` by ID set difference; returns max 1 new article, 1 new event, 1 new document per sync; no notifications on first install (no previous cache = no comparison)
+- `AppNotificationDelegate` — `AppDelegate` + `NotificationCenterDelegate` wiring; sets `UNUserNotificationCenterDelegate` at launch; foreground: shows banner + sound; tap: parses `userInfo` into `NotificationDeepLink` and calls `AppDeepLinkRouter.shared.handle(_:)`
+- `NotificationDeepLink` — `struct` with `id: UUID`, `contentType`, `slug`; `init?(userInfo:)` for parsing; `userInfo: [String: Any]` for scheduling; APNs-ready payload structure
+- `AppDeepLinkRouter` — `@MainActor @Observable` singleton; `pendingNotificationLink` observed by ContentView; `contentDidLoad` flag coordinates cold-launch deep link resolution after stores populate
+- ContentView navigation — `pendingArticle/Event/Document` state; `.navigationDestination(isPresented:)` per tab; `resolveDeepLink` switches tab + looks up content by id then slug; graceful fallback to tab switch if content not found
+- `SosteniView` — "Impostazioni" section with `NotificationStatusSection`: shows current auth status ("Abilitate" / "Non abilitate" / "Non ancora richieste"), "Apri" button opens Settings if denied
+- Onboarding gate updated: after "Inizia →", checks existing auth status; if already answered, enters ContentView directly; otherwise shows `NotificationPermissionView`
 
 ### v1.5.1 — Onboarding Visual Alignment & Animated Bokeh (26 May 2026)
 - Slides reordered to match reference: **Slide 0** = cream mission, **Slide 1** = red brand hero, **Slide 2** = dark festival

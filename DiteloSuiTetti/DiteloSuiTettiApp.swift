@@ -2,13 +2,17 @@ import SwiftUI
 
 @main
 struct DiteloSuiTettiApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @State private var store         = ArticleStore()
     @State private var eventStore    = EventStore()
     @State private var documentStore = DocumentStore()
     @State private var cache         = EditorialCacheRepository()
+    @State private var router        = AppDeepLinkRouter.shared
     private let coordinator          = EditorialSyncCoordinator()
 
-    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding      = false
+    @State private var showNotificationPrompt                             = false
 
     var body: some Scene {
         WindowGroup {
@@ -18,20 +22,41 @@ struct DiteloSuiTettiApp: App {
                         .environment(store)
                         .environment(eventStore)
                         .environment(documentStore)
+                        .environment(router)
                         .task { await loadContent() }
                         .transition(.opacity)
+                } else if showNotificationPrompt {
+                    NotificationPermissionView(
+                        onAllow: {
+                            Task {
+                                await LocalNotificationManager.shared.requestAuthorization()
+                                hasSeenOnboarding = true
+                            }
+                        },
+                        onSkip: { hasSeenOnboarding = true }
+                    )
+                    .transition(.opacity)
                 } else {
                     OnboardingView {
-                        hasSeenOnboarding = true
+                        Task {
+                            let status = await LocalNotificationManager.shared.authorizationStatus()
+                            // Skip pre-prompt if permission has already been answered
+                            if status == .authorized || status == .denied || status == .ephemeral {
+                                hasSeenOnboarding = true
+                            } else {
+                                showNotificationPrompt = true
+                            }
+                        }
                     }
                     .transition(.opacity)
                 }
             }
             .animation(.easeInOut(duration: 0.4), value: hasSeenOnboarding)
+            .animation(.easeInOut(duration: 0.35), value: showNotificationPrompt)
         }
     }
 
-    // MARK: - Content loading (runs when ContentView first appears)
+    // MARK: - Content loading
 
     private func loadContent() async {
         let cached = cache.loadPayload()
@@ -53,6 +78,14 @@ struct DiteloSuiTettiApp: App {
             eventStore.replace(with: payload.events)
             documentStore.replace(with: payload.documents)
             try? cache.clearAndReplace(with: payload)
+
+            // Schedule notifications for newly detected content (only when cache existed before)
+            if let previous = cached {
+                let detected = NewContentDetector.detect(previous: previous, fresh: payload)
+                if let a = detected.newArticle  { await LocalNotificationManager.shared.scheduleIfNeeded(for: a) }
+                if let e = detected.newEvent    { await LocalNotificationManager.shared.scheduleIfNeeded(for: e) }
+                if let d = detected.newDocument { await LocalNotificationManager.shared.scheduleIfNeeded(for: d) }
+            }
         } catch {
             if hasCachedContent {
                 store.setOfflineWarning()
@@ -65,5 +98,8 @@ struct DiteloSuiTettiApp: App {
                 documentStore.failedLoading(message: message)
             }
         }
+
+        // Signal ContentView that stores are ready for deep link resolution
+        router.contentDidLoad = true
     }
 }
