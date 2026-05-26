@@ -31,12 +31,21 @@ struct EventDetailView: View {
          Color(red: 55/255, green: 48/255, blue: 155/255)]
     }
 
+    private var eventTitle: String {
+        TextNormalizer.singleLineClean(event.title)
+    }
+
+    private var eventLabel: String {
+        event.type.isEmpty ? "Evento" : event.type
+    }
+
     // MARK: - Body
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 heroSection
+                titleCardSection
                 contentSection
             }
             .containerRelativeFrame(.horizontal)
@@ -78,13 +87,20 @@ struct EventDetailView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
-        DetailHeroView(
+        DetailHeroImage(
             imageURL: event.imageURL,
             fallbackColors: heroColors,
-            label: event.type.isEmpty ? "Evento" : event.type,
-            title: event.title,
-            height: 410,
-            maxTitleLines: 3
+            height: 340
+        )
+    }
+
+    // MARK: - Title card
+
+    private var titleCardSection: some View {
+        DetailTitleCard(
+            label: eventLabel,
+            labelColor: Color(red: 91/255, green: 82/255, blue: 208/255),
+            title: eventTitle
         )
     }
 
@@ -235,9 +251,32 @@ struct EventDetailView: View {
     }
 }
 
-#Preview {
+#Preview("Short title") {
     NavigationStack {
         EventDetailView(event: Event.all[0])
+    }
+    .environment(EventStore(service: StubEventService()))
+}
+
+#Preview("Long title") {
+    NavigationStack {
+        EventDetailView(event: Event(
+            id: UUID(),
+            title: "SUI TETTI del MEETING 2025, insieme con mattoni nuovi per un futuro più solido e condiviso!",
+            slug: "meeting-2025",
+            type: "Meeting",
+            day: "20",
+            monthShort: "AGO",
+            fullDate: "20 agosto 2025",
+            time: "09:00",
+            location: "Rimini Fiera",
+            description: "",
+            link: nil,
+            imageURL: nil,
+            rawDate: nil,
+            updatedAt: Date(),
+            syncVersion: 1
+        ))
     }
     .environment(EventStore(service: StubEventService()))
 }

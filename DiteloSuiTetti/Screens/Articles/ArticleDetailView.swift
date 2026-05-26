@@ -9,13 +9,9 @@ struct ArticleDetailView: View {
     }
 
     private var heroTitle: String {
-        article.title
-            .replacingOccurrences(of: "\\n", with: " ")
-            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        TextNormalizer.singleLineClean(article.title)
     }
 
-    // Suppress excerpt when the body already opens with the same text (common CMS pattern)
     private var shouldShowExcerpt: Bool {
         guard !article.excerpt.isEmpty else { return false }
         let body = plainBody.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -27,10 +23,9 @@ struct ArticleDetailView: View {
         ScrollView {
             VStack(spacing: 0) {
                 heroSection
+                titleCardSection
                 contentSection
             }
-            // containerRelativeFrame ensures the VStack is exactly the scroll view's width,
-            // preventing text overflow when maxWidth:.infinity resolves unconstrained inside ScrollView
             .containerRelativeFrame(.horizontal)
         }
         .scrollIndicators(.hidden)
@@ -55,37 +50,36 @@ struct ArticleDetailView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
-        DetailHeroView(
+        DetailHeroImage(
             imageURL: article.imageURL,
             fallbackColors: article.thumbnailColors,
-            label: article.category,
-            title: heroTitle,
-            height: 430,
-            maxTitleLines: 4
+            height: 340
         )
+    }
+
+    // MARK: - Title card
+
+    private var titleCardSection: some View {
+        DetailTitleCard(
+            label: article.category,
+            labelColor: article.categoryColor,
+            title: heroTitle
+        ) {
+            metadataRow
+        }
     }
 
     // MARK: - Content
 
     private var contentSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            metadataRow
-                .padding(.top, 20)
-                .padding(.horizontal, 24)
-
-            Rectangle()
-                .fill(.brandSep)
-                .frame(height: 1)
-                .padding(.horizontal, 24)
-                .padding(.top, 14)
-
             if shouldShowExcerpt {
                 Text(article.excerpt)
                     .font(.system(size: 16).italic())
                     .foregroundStyle(.brandGray)
                     .lineSpacing(5)
                     .padding(.horizontal, 24)
-                    .padding(.top, 20)
+                    .padding(.top, 24)
             }
 
             if !plainBody.isEmpty {
@@ -94,7 +88,7 @@ struct ArticleDetailView: View {
                     .foregroundStyle(.brandBlack)
                     .lineSpacing(8)
                     .padding(.horizontal, 24)
-                    .padding(.top, shouldShowExcerpt ? 16 : 20)
+                    .padding(.top, shouldShowExcerpt ? 16 : 24)
                     .padding(.bottom, 100)
             } else if !article.excerpt.isEmpty {
                 Text(article.excerpt)
@@ -102,7 +96,7 @@ struct ArticleDetailView: View {
                     .foregroundStyle(.brandBlack)
                     .lineSpacing(8)
                     .padding(.horizontal, 24)
-                    .padding(.top, 20)
+                    .padding(.top, 24)
                     .padding(.bottom, 100)
             } else {
                 VStack(spacing: 8) {
