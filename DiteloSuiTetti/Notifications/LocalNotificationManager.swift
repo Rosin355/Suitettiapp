@@ -49,13 +49,18 @@ final class LocalNotificationManager {
 
     // MARK: - Private
 
+    private func canScheduleNotifications(status: UNAuthorizationStatus) -> Bool {
+        status == .authorized || status == .provisional || status == .ephemeral
+    }
+
     private func schedule(
         id: String,
         subtitle: String,
         body: String,
         deepLink: NotificationDeepLink
     ) async {
-        guard await authorizationStatus() == .authorized else { return }
+        let status = await authorizationStatus()
+        guard canScheduleNotifications(status: status) else { return }
         guard !hasSent(id) else { return }
 
         let content          = UNMutableNotificationContent()
@@ -68,8 +73,14 @@ final class LocalNotificationManager {
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
 
-        try? await center.add(request)
-        markSent(id)
+        do {
+            try await center.add(request)
+            markSent(id)
+        } catch {
+            #if DEBUG
+            print("▶ LocalNotificationManager: failed to schedule '\(id)' — \(error.localizedDescription)")
+            #endif
+        }
     }
 
     private func hasSent(_ id: String) -> Bool {

@@ -41,7 +41,7 @@ struct DiteloSuiTettiApp: App {
                         Task {
                             let status = await LocalNotificationManager.shared.authorizationStatus()
                             // Skip pre-prompt if permission has already been answered
-                            if status == .authorized || status == .denied || status == .ephemeral {
+                            if status == .authorized || status == .provisional || status == .denied || status == .ephemeral {
                                 hasSeenOnboarding = true
                             } else {
                                 showNotificationPrompt = true
