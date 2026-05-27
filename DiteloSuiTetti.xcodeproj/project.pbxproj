@@ -10,9 +10,22 @@
 		CD3B7ED92FBC93DF00AD403B /* DiteloSuiTetti.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DiteloSuiTetti.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CD05320A2FC6EFEF00F3B810 /* Exceptions for "DiteloSuiTetti" folder in "DiteloSuiTetti" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CD3B7ED82FBC93DF00AD403B /* DiteloSuiTetti */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CD3B7EDB2FBC93DF00AD403B /* DiteloSuiTetti */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CD05320A2FC6EFEF00F3B810 /* Exceptions for "DiteloSuiTetti" folder in "DiteloSuiTetti" target */,
+			);
 			path = DiteloSuiTetti;
 			sourceTree = "<group>";
 		};
@@ -251,11 +264,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DiteloSuiTetti/DiteloSuiTetti.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5L72YV7W44;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DiteloSuiTetti/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Sui Tetti";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Ditelo sui Tetti vuole aggiungere gli eventi al tuo calendario.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -286,11 +301,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DiteloSuiTetti/DiteloSuiTetti.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 5L72YV7W44;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DiteloSuiTetti/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Sui Tetti";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Ditelo sui Tetti vuole aggiungere gli eventi al tuo calendario.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

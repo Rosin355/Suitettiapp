@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 @main
 struct DiteloSuiTettiApp: App {
@@ -30,6 +31,10 @@ struct DiteloSuiTettiApp: App {
                         onAllow: {
                             Task {
                                 await LocalNotificationManager.shared.requestAuthorization()
+                                let status = await LocalNotificationManager.shared.authorizationStatus()
+                                if status == .authorized || status == .provisional || status == .ephemeral {
+                                    UIApplication.shared.registerForRemoteNotifications()
+                                }
                                 hasSeenOnboarding = true
                             }
                         },
@@ -59,6 +64,11 @@ struct DiteloSuiTettiApp: App {
     // MARK: - Content loading
 
     private func loadContent() async {
+        let notifStatus = await LocalNotificationManager.shared.authorizationStatus()
+        if notifStatus == .authorized || notifStatus == .provisional || notifStatus == .ephemeral {
+            UIApplication.shared.registerForRemoteNotifications()
+        }
+
         let cached = cache.loadPayload()
         let hasCachedContent = cached != nil
 

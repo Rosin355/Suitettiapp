@@ -38,6 +38,10 @@ enum AppEnvironment {
         apiBaseURL.appendingPathComponent("functions/v1/sync-editorial")
     }
 
+    static var registerPushTokenEndpoint: URL {
+        apiBaseURL.appendingPathComponent("functions/v1/register-push-token")
+    }
+
     static func syncEditorialDeltaEndpoint(since date: Date) -> URL {
         var components = URLComponents(url: syncEditorialEndpoint, resolvingAgainstBaseURL: false)!
         components.queryItems = [

@@ -6,12 +6,21 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v1.6.1** — Local Notifications Hardening  
-*Last updated: 26 May 2026*
+**v1.7.0** — APNs Token Registration  
+*Last updated: 27 May 2026*
 
 ---
 
 ## Changelog
+
+### v1.7.0 — APNs Token Registration (27 May 2026)
+- APNs device token registration wired end-to-end: iOS calls `UIApplication.shared.registerForRemoteNotifications()` after notification permission is granted (new users) and on every app launch when permission is already active (existing users)
+- `AppDelegate.application(_:didRegisterForRemoteNotificationsWithDeviceToken:)` — converts raw `Data` token to lowercase hex string; logs token prefix in DEBUG; forwards to `PushTokenRegistrationService`
+- `AppDelegate.application(_:didFailToRegisterForRemoteNotificationsWithError:)` — logs failure in DEBUG builds
+- `PushTokenRegistrationService` — `@MainActor` singleton; POSTs device token, platform, environment (`sandbox` in DEBUG/Xcode, `production` in Release/TestFlight), bundle ID, app version, and build number to the `register-push-token` Edge Function; deduplicates via `UserDefaults` so the network call is skipped when the token is unchanged since last successful registration
+- `push_device_tokens` Supabase table — `device_token unique`, `platform`, `environment check (sandbox|production)`, `bundle_id`, `app_version`, `build_number`, `is_enabled`, `last_seen_at`, `created_at`, `updated_at`; RLS enabled with no anon access; all writes go through Edge Function service role
+- `register-push-token` Supabase Edge Function — validates payload fields; upserts by `device_token` conflict target (insert on first registration, update `environment`, `bundle_id`, `app_version`, `build_number`, `is_enabled=true`, `last_seen_at`, `updated_at` on subsequent calls); `SUPABASE_SERVICE_ROLE_KEY` used server-side only
+- Remote push sending is not implemented in this version
 
 ### v1.6.1 — Local Notifications Hardening (26 May 2026)
 - `LocalNotificationManager` — notification IDs are now marked as sent only after `center.add(_:)` succeeds; previously IDs were persisted before the OS confirmed scheduling, which could silently suppress future attempts for the same content item
