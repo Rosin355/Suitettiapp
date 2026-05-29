@@ -11,6 +11,30 @@ struct EventDTO: Decodable {
     let descrizione: String
     let link: String?
     let immagineUrl: String?
-    let updatedAt: Date
+    let updatedAt: Date?
     let syncVersion: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case id, titolo, slug, tipo, dataEvento, ora, luogo, descrizione, link, immagineUrl, updatedAt, syncVersion
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id          = try c.decode(UUID.self,   forKey: .id)
+        titolo      = try c.decode(String.self, forKey: .titolo)
+        slug        = try c.decode(String.self, forKey: .slug)
+        tipo        = try c.decode(String.self, forKey: .tipo)
+        dataEvento  = try c.decode(String.self, forKey: .dataEvento)
+        ora         = try c.decode(String.self, forKey: .ora)
+        luogo       = try c.decode(String.self, forKey: .luogo)
+        descrizione = try c.decode(String.self, forKey: .descrizione)
+        link        = try c.decodeIfPresent(String.self, forKey: .link)
+        immagineUrl = try c.decodeIfPresent(String.self, forKey: .immagineUrl)
+        syncVersion = try c.decode(Int.self,    forKey: .syncVersion)
+
+        updatedAt = try? c.decode(Date.self, forKey: .updatedAt)
+        if updatedAt == nil {
+            NSLog("[EventDTO] ⚠️ updatedAt missing/invalid for slug '%@'", slug)
+        }
+    }
 }

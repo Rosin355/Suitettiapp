@@ -26,6 +26,8 @@ extension ArticleDTO {
         let (categoryColor, thumbnailColors) = articleColorPalette[index]
         let bodyWords = contenuto.split(separator: " ").count
         let readMinutes = max(1, Int(ceil(Double(bodyWords) / 200.0)))
+        let dateShort = dataPubblicazione.map { shortDateFormatter.string(from: $0) } ?? "Data non disponibile"
+        let dateFull  = dataPubblicazione.map { fullDateFormatter.string(from: $0)  } ?? "Data non disponibile"
         return Article(
             id:              id,
             slug:            slug,
@@ -33,8 +35,8 @@ extension ArticleDTO {
             categoryColor:   categoryColor,
             thumbnailColors: thumbnailColors,
             title:           sentenceCase(titolo),
-            date:            shortDateFormatter.string(from: dataPubblicazione),
-            fullDate:        fullDateFormatter.string(from: dataPubblicazione),
+            date:            dateShort,
+            fullDate:        dateFull,
             readTime:        "\(readMinutes) min",
             excerpt:         estratto,
             body:            contenuto,

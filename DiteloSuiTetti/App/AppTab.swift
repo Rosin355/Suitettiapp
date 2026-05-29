@@ -1,5 +1,5 @@
 import SwiftUI
 
 enum AppTab: Hashable {
-    case home, articoli, sostieni
+    case home, articoli, documenti, chiSiamo
 }

@@ -34,6 +34,11 @@ enum AppEnvironment {
 
     // MARK: - Endpoints
 
+    static var privacyPolicyURL: URL { websiteURL.appendingPathComponent("privacy") }
+    static var termsURL: URL        { websiteURL.appendingPathComponent("termini") }
+
+    // MARK: - Endpoints
+
     static var syncEditorialEndpoint: URL {
         apiBaseURL.appendingPathComponent("functions/v1/sync-editorial")
     }

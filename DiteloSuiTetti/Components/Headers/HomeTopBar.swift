@@ -37,7 +37,7 @@ struct HomeTopBar: View {
 
     private var sostieniciButton: some View {
         Button {
-            selectedTab = .sostieni
+            selectedTab = .chiSiamo
         } label: {
             Text("Sostienici →")
                 .font(.system(size: 13, weight: .semibold))

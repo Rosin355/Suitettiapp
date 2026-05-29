@@ -9,6 +9,6 @@ struct Document: Identifiable {
     let description: String
     let url: URL?
     let uploadedAt: String
-    let updatedAt: Date
+    let updatedAt: Date?
     let syncVersion: Int
 }

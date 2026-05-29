@@ -14,7 +14,7 @@ struct Event: Identifiable {
     let link: URL?
     let imageURL: URL?
     let rawDate: Date?      // parsed start date, used for calendar
-    let updatedAt: Date
+    let updatedAt: Date?
     let syncVersion: Int
 
     var isUpcoming: Bool {

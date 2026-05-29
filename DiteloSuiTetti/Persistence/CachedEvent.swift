@@ -16,7 +16,7 @@ final class CachedEvent {
     var linkString: String?
     var imageURLString: String?
     var rawDate: Date?
-    var updatedAt: Date
+    var updatedAt: Date?
     var syncVersion: Int
 
     init(from event: Event) {

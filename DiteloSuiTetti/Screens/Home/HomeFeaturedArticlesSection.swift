@@ -7,22 +7,28 @@ struct HomeFeaturedArticlesSection: View {
     var body: some View {
         if !store.articles.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                SectionHeader(title: "In evidenza", action: "Tutti") {
+                SectionHeader(title: "In evidenza", action: "Vedi tutti") {
                     selectedTab = .articoli
                 }
-                ScrollView(.horizontal) {
-                    HStack(spacing: 12) {
-                        ForEach(store.articles.prefix(3)) { article in
-                            NavigationLink(destination: ArticleDetailView(article: article)) {
-                                FeaturedArticleCard(article: article)
-                            }
-                            .buttonStyle(PressableCardStyle())
+
+                let featured = Array(store.articles.prefix(5))
+                VStack(spacing: 0) {
+                    ForEach(Array(featured.enumerated()), id: \.element.id) { index, article in
+                        NavigationLink(destination: ArticleDetailView(article: article)) {
+                            ArticleListRow(article: article, isLast: index == featured.count - 1)
                         }
+                        .buttonStyle(PressableCardStyle())
                     }
-                    .padding(.horizontal, DT.padding)
-                    .padding(.bottom, 6)
                 }
-                .scrollIndicators(.hidden)
+                .background(.white.opacity(0.82))
+                .clipShape(.rect(cornerRadius: DT.cornerRadius))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DT.cornerRadius)
+                        .strokeBorder(.white.opacity(0.75), lineWidth: 0.5)
+                }
+                .shadow(color: .black.opacity(0.06), radius: 7, x: 0, y: 2)
+                .padding(.horizontal, DT.padding)
+                .padding(.bottom, 12)
             }
             .appearAnimation(delay: 0.1)
         }

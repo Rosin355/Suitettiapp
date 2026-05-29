@@ -1,38 +1,50 @@
 import SwiftUI
 
 struct HomeHeroSection: View {
+    @State private var appeared = false
+
     var body: some View {
         VStack(spacing: 0) {
-            ZStack(alignment: .topLeading) {
-                BokehCirclesBackground()
-
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("PER IL BENE COMUNE")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .kerning(1.8)
-                        .padding(.bottom, 14)
-
-                    Text("Ditelo")
-                        .font(.system(size: 66, weight: .black))
-                        .foregroundStyle(.white)
-                        .kerning(-3)
-
-                    Text("sui Tetti.")
-                        .font(Font.custom("Georgia", size: 63).italic())
-                        .foregroundStyle(.brandYellowLight)
-                        .kerning(-2)
-                        .padding(.bottom, 28)
-                }
-                .padding(.horizontal, 22)
-                .safeAreaPadding(.top)
-                .padding(.top, DT.topBarContentOffset)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            HomeStatsStrip()
+            heroContent
+            HeroStatsView()
         }
-        .background(.brandRed)
+        .background(Color(red: 0.91, green: 0.10, blue: 0.17))
         .clipped()
     }
+
+    private var heroContent: some View {
+        ZStack(alignment: .topLeading) {
+            HeroBackgroundView()
+
+            // Bottom vignette — deepens separation from the stats strip
+            VStack(spacing: 0) {
+                Spacer()
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.20)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 72)
+            }
+            .allowsHitTesting(false)
+
+            HeroBrandView()
+                .padding(.horizontal, 24)
+                .safeAreaPadding(.top)
+                .padding(.top, DT.topBarContentOffset)
+                .padding(.bottom, 36)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 10)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.55).delay(0.12)) {
+                appeared = true
+            }
+        }
+    }
+}
+
+#Preview {
+    HomeHeroSection()
 }

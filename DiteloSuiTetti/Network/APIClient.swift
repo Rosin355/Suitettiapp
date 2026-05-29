@@ -32,10 +32,8 @@ enum APIClient {
             if Task.isCancelled { throw APIError.cancelled }
             guard isRetryable(error), attempt < maxRetries else { throw error }
             let delayNs: UInt64 = attempt == 0 ? 500_000_000 : 1_000_000_000
-            #if DEBUG
             let delaySec = attempt == 0 ? "0.5" : "1.0"
-            print("[APIClient] ↺ retry \(attempt + 1)/\(maxRetries) in \(delaySec)s — \(error.localizedDescription)")
-            #endif
+            NSLog("[APIClient] ↺ retry %d/%d in %@s — %@", attempt + 1, maxRetries, delaySec, error.localizedDescription)
             try await Task.sleep(nanoseconds: delayNs)
             if Task.isCancelled { throw APIError.cancelled }
             return try await fetchWithRetry(request, as: type, attempt: attempt + 1)
@@ -45,9 +43,7 @@ enum APIClient {
     // MARK: - Single attempt
 
     private static func perform<T: Decodable>(_ request: URLRequest, as type: T.Type) async throws -> T {
-        #if DEBUG
-        print("[APIClient] ▶ \(request.httpMethod ?? "GET") \(request.url?.absoluteString ?? "-")")
-        #endif
+        NSLog("[APIClient] ▶ %@ %@", request.httpMethod ?? "GET", request.url?.absoluteString ?? "-")
 
         let data: Data
         let response: URLResponse
@@ -62,18 +58,22 @@ enum APIClient {
 
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
 
-        #if DEBUG
-        print("[APIClient] ← \(http.statusCode) (\(data.count) bytes)")
-        #endif
+        NSLog("[APIClient] ← HTTP %d (%d bytes) from %@", http.statusCode, data.count, request.url?.host ?? "-")
 
         guard !data.isEmpty else { throw APIError.emptyResponse }
         guard (200..<300).contains(http.statusCode) else {
-            throw APIError.badStatus(code: http.statusCode, message: serverErrorMessage(data))
+            let msg = serverErrorMessage(data)
+            NSLog("[APIClient] ✗ bad status %d — %@", http.statusCode, msg ?? "(no body)")
+            throw APIError.badStatus(code: http.statusCode, message: msg)
         }
 
         do {
             return try JSONDecoder.editorial.decode(T.self, from: data)
         } catch {
+            let preview = String(data: data.prefix(1000), encoding: .utf8) ?? "<non-utf8>"
+            NSLog("[APIClient] ✗ decode failed for %@: %@", String(describing: T.self), "\(error)")
+            NSLog("[APIClient] ✗ raw body (first 1000 chars): %@", preview)
+            SyncLogger.shared.append("DECODE FAIL [\(T.self)]: \(error)\nBody: \(preview)")
             throw APIError.decodingFailed(error)
         }
     }
@@ -170,12 +170,23 @@ private extension JSONDecoder {
         d.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let string = try container.decode(String.self)
+
             let fractional = ISO8601DateFormatter()
             fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             if let date = fractional.date(from: string) { return date }
+
             let standard = ISO8601DateFormatter()
             standard.formatOptions = [.withInternetDateTime]
             if let date = standard.date(from: string) { return date }
+
+            // date-only "yyyy-MM-dd" (e.g. Supabase date columns)
+            let dateOnly = DateFormatter()
+            dateOnly.locale = Locale(identifier: "en_US_POSIX")
+            dateOnly.dateFormat = "yyyy-MM-dd"
+            dateOnly.timeZone = TimeZone(identifier: "UTC")
+            if let date = dateOnly.date(from: string) { return date }
+
+            NSLog("[APIClient] ✗ unsupported date string '%@' — decoder will throw", string)
             throw DecodingError.dataCorruptedError(in: container,
                 debugDescription: "Unsupported date format: \(string)")
         }

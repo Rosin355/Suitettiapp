@@ -2,6 +2,8 @@ import SwiftUI
 import UserNotifications
 
 struct SosteniView: View {
+    @State private var showDiagnostics = false
+
     private let ways: [(icon: String, title: String, detail: String)] = [
         (icon: "🤝", title: "Diventa associazione aderente",
          detail: "La tua associazione può entrare nella rete e contribuire alla voce comune."),
@@ -25,6 +27,8 @@ struct SosteniView: View {
         .background(.brandCream)
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .onTapGesture(count: 5) { showDiagnostics = true }
+        .sheet(isPresented: $showDiagnostics) { SyncDiagnosticsView() }
     }
 }
 

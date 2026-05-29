@@ -11,7 +11,7 @@ final class CachedDocument {
     var documentDescription: String
     var urlString: String?
     var uploadedAt: String
-    var updatedAt: Date
+    var updatedAt: Date?
     var syncVersion: Int
 
     init(from document: Document) {

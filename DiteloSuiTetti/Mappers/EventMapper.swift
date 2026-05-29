@@ -9,11 +9,9 @@ extension EventDTO {
                          ? "" : EventDateParser.displayTime(ora)
         let rawDate  = EventDateParser.combinedDate(dateString: dataEvento, timeString: ora)
 
-        #if DEBUG
         if rawDate == nil {
-            print("[EventMapper] ⚠️ Date parse failed — title: \(titolo), dataEvento: \(dataEvento), ora: \(ora)")
+            NSLog("[EventMapper] ⚠️ date parse failed — title: %@, dataEvento: %@, ora: %@", titolo, dataEvento, ora)
         }
-        #endif
 
         return Event(
             id:          id,

@@ -24,12 +24,6 @@ struct ContentView: View {
                         )) {
                             if let e = pendingEvent { EventDetailView(event: e) }
                         }
-                        .navigationDestination(isPresented: Binding(
-                            get: { pendingDocument != nil },
-                            set: { if !$0 { pendingDocument = nil } }
-                        )) {
-                            if let d = pendingDocument { DocumentDetailView(document: d) }
-                        }
                 }
             }
             Tab("Articoli", systemImage: "doc.text.fill", value: AppTab.articoli) {
@@ -44,10 +38,22 @@ struct ContentView: View {
                         }
                 }
             }
-            Tab("Sostieni", systemImage: "heart.fill", value: AppTab.sostieni) {
+            Tab("Documenti", systemImage: "folder.fill", value: AppTab.documenti) {
                 NavigationStack {
-                    SosteniView()
-                        .navigationTitle("Sostieni")
+                    DocumentiView()
+                        .navigationTitle("Documenti")
+                        .navigationDestination(isPresented: Binding(
+                            get: { pendingDocument != nil },
+                            set: { if !$0 { pendingDocument = nil } }
+                        )) {
+                            if let d = pendingDocument { DocumentDetailView(document: d) }
+                        }
+                }
+            }
+            Tab("Chi siamo", systemImage: "info.circle.fill", value: AppTab.chiSiamo) {
+                NavigationStack {
+                    AboutView()
+                        .navigationTitle("Chi siamo")
                 }
             }
         }
@@ -59,7 +65,6 @@ struct ContentView: View {
                 _ = router.consumePendingNotificationLink()
                 resolveDeepLink(link)
             }
-            // else: defer to the contentDidLoad observer below
         }
         // Content loaded — retry any pending cold-launch deep link
         .onChange(of: router.contentDidLoad) { _, loaded in
@@ -98,7 +103,7 @@ struct ContentView: View {
                 ?? documentStore.documents.first(where: { $0.slug == link.slug }) {
                 pendingDocument = document
             }
-            selectedTab = .home
+            selectedTab = .documenti
         }
     }
 }

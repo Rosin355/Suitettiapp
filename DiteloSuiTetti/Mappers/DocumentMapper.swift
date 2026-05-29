@@ -9,7 +9,8 @@ private let uploadedFormatter: DateFormatter = {
 
 extension DocumentDTO {
     func toDocument() -> Document {
-        Document(
+        let uploaded = dataCaricamento.map { uploadedFormatter.string(from: $0) } ?? "Data non disponibile"
+        return Document(
             id:          id,
             title:       titolo,
             slug:        slug,
@@ -17,7 +18,7 @@ extension DocumentDTO {
             category:    categoria,
             description: descrizione,
             url:         url.flatMap { URL(string: $0) },
-            uploadedAt:  uploadedFormatter.string(from: dataCaricamento),
+            uploadedAt:  uploaded,
             updatedAt:   updatedAt,
             syncVersion: syncVersion
         )

@@ -8,16 +8,20 @@ struct HomeView: View {
         ScrollView {
             VStack(spacing: 0) {
                 HomeHeroSection()
-                TickerView()
+                HeroTickerView()
+                    .frame(maxWidth: .infinity)
                 HomeFeaturedArticlesSection(selectedTab: $selectedTab)
                 HomeEventsSection()
                 HomeQuoteSection()
                 HomeReferendumCTA()
                     .padding(.bottom, 8)
+                // Ensures last card scrolls fully above the floating glass tab bar
+                Color.clear.frame(height: 130)
             }
         }
         .scrollIndicators(.hidden)
-        .ignoresSafeArea(edges: .top)
+        .contentMargins(.horizontal, 0)
+        .ignoresSafeArea()
         .background(.brandCream)
         .toolbar(.hidden, for: .navigationBar)
         .onScrollGeometryChange(for: CGFloat.self) { geo in
