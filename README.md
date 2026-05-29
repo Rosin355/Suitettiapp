@@ -244,7 +244,7 @@ Italian citizens interested in civic participation, local governance, and commun
 | Event detail view + calendar save | ✅ Done |
 | Event filtering (upcoming / past / all) | ✅ Done |
 | Delta sync (since timestamp) | 🔲 Next |
-| Push notifications | 🔲 Backlog |
+| Push notifications | ✅ Done |
 | Offline reading (SwiftData cache) | ✅ Done |
 | Authentication / user accounts | 🔲 Backlog |
 
