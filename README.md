@@ -6,12 +6,46 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v1.7.0** — APNs Token Registration  
-*Last updated: 27 May 2026*
+**v2.0.0** — Tab restructure, Android handoff, document decoder hardening  
+*Last updated: 29 May 2026*
+
+---
+
+## Android / Kotlin Handoff
+
+Documentation for rebuilding this app in Kotlin / Jetpack Compose:
+
+| Document | Purpose |
+|----------|---------|
+| [docs/ANDROID_HANDOFF.md](docs/ANDROID_HANDOFF.md) | App architecture, screen flows, iOS→Android technology mapping |
+| [docs/API_CONTRACT.md](docs/API_CONTRACT.md) | Supabase API endpoints, field definitions, decoding resilience rules |
+| [docs/ANDROID_IMPLEMENTATION_PLAN.md](docs/ANDROID_IMPLEMENTATION_PLAN.md) | Phase-by-phase Kotlin build plan (Phases 1–11) |
+
+Key notes for the Android developer:
+- Documents must be decoded **per-item** (one bad record must not zero the whole array)
+- Documents with a missing PDF URL **must still appear** in the list ("PDF non disponibile")
+- All events may be past — Home shows only upcoming events; empty state is valid
+- The Documenti tab is a first-class tab with its own fetching and PDF viewer
+- The Chi siamo tab contains: support CTA, Privacy Policy, Terms, notification settings, rate-app, version/build, and Digital Yogin srl attribution
 
 ---
 
 ## Changelog
+
+### v2.0.0 — Tab Restructure & Document Decoder Hardening (29 May 2026)
+- Tab bar restructured: **Home**, **Articoli**, **Documenti**, **Chi siamo** (Sostieni removed as a tab)
+- `AboutView` (Chi siamo) — intro, mission cards, support CTA, settings rows (Privacy, Terms, Notifications, Rate app), developer info
+- `DocumentDTO` decoder hardened: only `id` is required; `tipo`, `categoria`, `descrizione`, `syncVersion` default gracefully; accepts multiple field name variants for URL (`url` / `file_url` / `document_url` / `link`) and title (`titolo` / `title`)
+- `EditorialSyncResponseDTO` — per-item lossy decoding via `Lossy<T>` wrapper; one bad document no longer zeros the entire `documents` array; failed items are logged individually
+- `HomeFeaturedArticlesSection` — replaced horizontal card carousel with vertical `ArticleListRow` list (max 5 articles); "Tutti" → "Vedi tutti"
+- Home scroll fixed: 130dp bottom clearance ensures last card scrolls above floating tab bar
+- `HeroTickerView` — removed `edgeCover` gradient overlay that caused white premultiplied-alpha glow bands on physical devices
+- `InAppWebView` + `WebPageView` — WKWebView-backed in-nav web pages for legal screens
+- `AppEnvironment` — added `privacyPolicyURL` and `termsURL`
+- Deep link routing for documents now switches to `.documenti` tab (was `.home`)
+- Android/Kotlin handoff documentation added to `docs/`
+
+## Changelog (prior)
 
 ### v1.7.0 — APNs Token Registration (27 May 2026)
 - APNs device token registration wired end-to-end: iOS calls `UIApplication.shared.registerForRemoteNotifications()` after notification permission is granted (new users) and on every app launch when permission is already active (existing users)
