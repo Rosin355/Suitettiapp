@@ -6,8 +6,22 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v2.0.0** — Tab restructure, Android handoff, document decoder hardening  
-*Last updated: 29 May 2026*
+**v1.0 Release Candidate** — App Store pre-submission  
+*Last updated: 6 June 2026*
+
+### Release Candidate Status
+
+- ✅ All four tabs complete (Home, Articoli, Documenti, Chi siamo)
+- ✅ iPad adaptive layout + accessibility pass
+- ✅ SwiftData offline cache + resilient decoding
+- ✅ Article/Event PDF attachments — backend (`allegati` migration + `sync-editorial`) deployed; iOS fully wired
+- ✅ APNs push notifications — token registration + backend send deployed
+- ✅ Dark Mode navigation title fix — all cream-background screens use solid brand background
+- ✅ Screenshot Capture Mode (`--screenshots` launch argument)
+- ✅ Privacy Manifest (`PrivacyInfo.xcprivacy`) created
+- ⚠️ Remaining: App Store screenshots, metadata, `APNS_ENV` production verification, final TestFlight QA
+
+See [docs/APP_STORE_CHECKLIST.md](docs/APP_STORE_CHECKLIST.md) for the full pre-submission checklist.
 
 ---
 

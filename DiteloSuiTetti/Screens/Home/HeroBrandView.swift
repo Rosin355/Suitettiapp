@@ -2,21 +2,27 @@ import SwiftUI
 
 /// The editorial typography lockup at the centre of the home hero.
 /// "Ditelo" (bold sans) + "sui Tetti." (Georgia italic) + tagline.
+/// Accepts responsive font sizes from HomeHeroSection so the lockup
+/// scales gracefully on compact-height devices (SE, mini, non-Max).
 struct HeroBrandView: View {
+    var titleSize: CGFloat = 72
+    var subtitleSize: CGFloat = 66
+    var taglineBottomPadding: CGFloat = 20
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             tagline
-                .padding(.bottom, 20)
+                .padding(.bottom, taglineBottomPadding)
 
             Text("Ditelo")
-                .font(.system(size: 72, weight: .black))
+                .font(.system(size: titleSize, weight: .black))
                 .foregroundStyle(.white)
-                .kerning(-3.5)
+                .kerning(-3.5 * titleSize / 72)
 
             Text("sui Tetti.")
-                .font(.georgiaItalic(66))
+                .font(.georgiaItalic(subtitleSize))
                 .foregroundStyle(.brandYellowLight)
-                .kerning(-2.5)
+                .kerning(-2.5 * subtitleSize / 66)
         }
     }
 

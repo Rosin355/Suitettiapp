@@ -38,7 +38,8 @@ struct DocumentDetailView: View {
                     .padding(.top, 28)
                     .padding(.bottom, 100)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: DT.readableMaxWidth)
+        .frame(maxWidth: .infinity)
         }
         .background(.brandCream)
         .navigationTitle("Documento")

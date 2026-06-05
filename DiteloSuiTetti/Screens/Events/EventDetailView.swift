@@ -130,9 +130,46 @@ struct EventDetailView: View {
             actionButtons
                 .padding(.horizontal, 24)
                 .padding(.top, 28)
-                .padding(.bottom, 100)
+                .padding(.bottom, 24)
+
+            relatedDocumentsSection
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            NSLog("[EventDetailView] opened slug '%@' relatedDocs: %d",
+                  event.slug, event.relatedDocuments.count)
+        }
+    }
+
+    @ViewBuilder
+    private var relatedDocumentsSection: some View {
+        if !event.relatedDocuments.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Rectangle()
+                    .fill(.brandSep)
+                    .frame(height: 1)
+                    .padding(.horizontal, 24)
+
+                Text("Documenti dell'evento")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.brandGray)
+                    .textCase(.uppercase)
+                    .kerning(0.5)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    .padding(.bottom, 12)
+
+                VStack(spacing: 8) {
+                    ForEach(event.relatedDocuments) { doc in
+                        LinkedDocumentCard(document: doc)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 100)
+            }
+        } else {
+            Color.clear.frame(height: 100).allowsHitTesting(false)
+        }
     }
 
     // MARK: - Info cards (Quando / Dove)
@@ -211,7 +248,7 @@ struct EventDetailView: View {
             Image(systemName: "chevron.left")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
                 .background(
                     Circle()
                         .fill(.black.opacity(0.35))
@@ -226,7 +263,7 @@ struct EventDetailView: View {
             Image(systemName: "square.and.arrow.up")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
                 .background(
                     Circle()
                         .fill(.black.opacity(0.35))

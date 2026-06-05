@@ -97,10 +97,25 @@ Response (error):
 | `estratto` | string | Yes | Excerpt / teaser |
 | `contenuto` | string | Yes | Full body (may contain HTML) |
 | `immagine_url` | string | No | Absolute URL to hero image; may be null |
+| `attachments` | array | No | Optional array of `AttachmentDTO` objects; may be absent or empty |
 | `updated_at` | ISO 8601 string | Soft | Nullable |
 | `sync_version` | integer | Yes | Monotonically increasing |
 
 **Key decoding**: The backend uses `snake_case`. Map to camelCase for your DTO layer (`data_pubblicazione` → `dataPubblicazione`, `immagine_url` → `immagineUrl`, etc.).
+
+**Attachment fields** (`attachments` array items) — the backend always returns English keys:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID string | Attachment primary key |
+| `title` | string | Display name; default `"Allegato"` |
+| `type` | string | e.g. `"PDF"`, `"Documento"`; default `"PDF"` |
+| `description` | string | Optional description; default `""` |
+| `url` | string \| null | PDF / file URL; null if not yet uploaded |
+
+The iOS client (`AttachmentDTO`) also accepts Italian field names (`titolo`, `tipo`, `descrizione`) as fallbacks.
+
+If the `attachments` array fails to decode entirely, treat it as empty — never fail the parent article decode.
 
 ---
 
@@ -118,6 +133,7 @@ Response (error):
 | `descrizione` | string | Yes | Description body (may contain HTML) |
 | `link` | string | No | External event URL; may be null |
 | `immagine_url` | string | No | Hero image URL; may be null |
+| `attachments` | array | No | Optional array of `AttachmentDTO` objects; same schema as Article attachments |
 | `updated_at` | ISO 8601 string | Soft | Nullable |
 | `sync_version` | integer | Yes | Monotonically increasing |
 
@@ -282,4 +298,223 @@ No `Authorization` header is needed for the editorial sync endpoint.
 
 5. **Keep cached data visible on sync failure.** Network errors should result in a non-blocking offline banner, not a blank screen.
 
-6. **`serverTime` from the response is the source of truth for delta sync.** Do not use device time as the `since` parameter.
+6. **`server_time` from the response is the source of truth for delta sync.** Do not use device time as the `since` parameter. (The iOS decoder uses `convertFromSnakeCase`, so `server_time` maps automatically to the `serverTime` Swift property.)
+
+---
+
+## allegati Table Schema
+
+The `allegati` table uses a polymorphic `parent_type + parent_id` design rather than separate FK columns per content type.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | Primary key |
+| `parent_type` | text | `'article'` or `'event'` |
+| `parent_id` | UUID | ID of the article or event |
+| `title` | text | Attachment display title |
+| `type` | text | e.g. `'PDF'`; default `'PDF'` |
+| `description` | text | Optional description; nullable |
+| `url` | text | Absolute URL to the file |
+| `sort_order` | integer | Display order (lower = first); default `0` |
+| `is_mobile_visible` | boolean | Mobile read path filter; default `true` |
+| `deleted_at` | timestamptz | Soft delete; null = live |
+| `created_at` / `updated_at` | timestamptz | Timestamps |
+| `sync_version` | bigint | Monotonically increasing; default `1` |
+
+Mobile queries filter: `deleted_at IS NULL AND is_mobile_visible = true`.
+
+The trigger `allegati_bump_parent_updated_at` bumps the parent `articles.updated_at` or `events.updated_at` on any INSERT/UPDATE/DELETE, so delta sync (`?since=`) automatically includes the parent when attachments change.
+
+---
+
+## Backend Deployment — Attachments Pipeline
+
+Steps to put the `attachments` field live. Until deployed, `attachments: []` is returned for every article and event (graceful empty state — no iOS crash).
+
+### Step 0 — Verify schema (confirmation before running migration)
+
+Run this in the Supabase SQL Editor to confirm the real table names:
+
+```sql
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+  and table_name in ('articles', 'events', 'documents', 'allegati')
+order by table_name;
+```
+
+Expected result (before migration): `articles`, `documents`, `events` — three rows.
+After migration: four rows including `allegati`.
+
+### Step 1 — Apply the database migration
+
+Migration file: `supabase/migrations/20260605000001_create_allegati.sql`
+
+**Option A — Supabase CLI:**
+```bash
+supabase db push
+```
+
+**Option B — Supabase dashboard SQL Editor:**
+1. Open dashboard → select project → **SQL Editor**
+2. Paste the full contents of `20260605000001_create_allegati.sql`
+3. Execute
+
+What the migration creates:
+- `public.allegati` — polymorphic attachment table (`parent_type + parent_id`, no FK constraints)
+- Four indexes: `(parent_type, parent_id)`, mobile read path (filtered), `deleted_at IS NULL`, `updated_at DESC`
+- `allegati_bump_parent_updated_at` PL/pgSQL trigger — bumps `articles.updated_at` or `events.updated_at` on any attachment change
+- RLS policy: `anon` + `authenticated` can SELECT where `deleted_at IS NULL AND is_mobile_visible = true`; no write policy (service-role only)
+
+**Verify migration succeeded:**
+```sql
+select count(*) from public.allegati;
+-- Expected: 0 (empty table, no error means table exists and RLS is set)
+```
+
+### Step 2 — Deploy the Edge Function
+
+Function file: `supabase/functions/sync-editorial/index.ts`
+
+**Option A — Supabase CLI:**
+```bash
+supabase functions deploy sync-editorial
+```
+
+**Option B — Supabase Dashboard (if CLI unavailable):**
+1. Dashboard → **Edge Functions** → select `sync-editorial`
+2. Click **Edit** (or open the function)
+3. Replace the entire `index.ts` content with the contents of `supabase/functions/sync-editorial/index.ts`
+4. Click **Deploy**
+
+The new function queries `articles`, `events`, `documents`, and `allegati` separately and merges attachments into articles/events by `parent_id`. All existing API fields are preserved unchanged.
+
+### Step 3 — Verify the endpoint
+
+```bash
+curl -s "https://kbswgeliohnpwopzzzpc.supabase.co/functions/v1/sync-editorial" \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); a=d['articles'][0]; print(a['titolo'], '→ attachments:', a['attachments'])"
+```
+
+Expected (before adding data):
+```
+3° FESTIVAL DELL'"UMANO TUTTO INTERO" → attachments: []
+```
+
+If the request returns a 500 error, check the Edge Function logs in the Supabase dashboard for the exact error.
+
+### Step 4 — Add test attachment data
+
+```sql
+-- Get a real article id first
+select id, titolo from public.articles limit 3;
+
+-- Insert a test attachment (replace the UUID with one from the query above)
+insert into public.allegati (parent_type, parent_id, title, type, description, url)
+values (
+  'article',
+  '<paste-article-uuid-here>',
+  'Documento di test',
+  'PDF',
+  'Allegato di prova per verifica pipeline',
+  'https://www.w3.org/WAI/WCAG21/Techniques/pdf/PDF2.pdf'
+);
+```
+
+Re-verify the endpoint shows the attachment:
+```bash
+curl -s "https://kbswgeliohnpwopzzzpc.supabase.co/functions/v1/sync-editorial" \
+  | python3 -c "import json,sys; [print(a['titolo'], len(a['attachments'])) for a in json.load(sys.stdin)['articles'] if a['attachments']]"
+```
+
+### Step 5 — Sample JSON response (with attachments)
+
+```json
+{
+  "server_time": "2026-06-05T21:30:00.000Z",
+  "articles": [
+    {
+      "id": "5c51421b-...",
+      "titolo": "3° FESTIVAL DELL'\"UMANO TUTTO INTERO\"",
+      "slug": "3-festival-dellumano-tutto-intero",
+      "categoria": "Eventi",
+      "data_pubblicazione": "2026-06-05T00:00:00+00:00",
+      "estratto": "...",
+      "contenuto": "<p>...</p>",
+      "immagine_url": "https://...",
+      "updated_at": "2026-06-05T20:30:25.723325+00:00",
+      "sync_version": 2,
+      "attachments": [
+        {
+          "id": "uuid",
+          "title": "Documento di test",
+          "type": "PDF",
+          "description": "Allegato di prova",
+          "url": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/PDF2.pdf"
+        }
+      ]
+    }
+  ],
+  "events": [ ... ],
+  "documents": [ ... ]
+}
+```
+
+### Step 6 — iOS app (no action required)
+
+The iOS app is fully wired for attachments (PHASE-4). After the next sync following backend deployment, articles and events with `allegati` rows will automatically show the "Documenti allegati" / "Documenti dell'evento" section in their detail views. No app update is required.
+
+---
+
+## Push Notification Payload
+
+### Token Registration
+
+```
+POST /functions/v1/register-push-token
+Content-Type: application/json
+```
+
+Request:
+```json
+{
+  "deviceToken": "<hex-string>",
+  "platform": "ios",
+  "environment": "production",
+  "bundleId": "com.romeshsinghabahu.DiteloSuiTetti",
+  "appVersion": "1.0.0",
+  "buildNumber": "1"
+}
+```
+
+Response: `{ "ok": true }` or `{ "error": "<message>" }`
+
+### APNs Push Payload
+
+Sent by `send-apns-push` when new content is published:
+
+```json
+{
+  "aps": {
+    "alert": {
+      "title": "Ditelo sui Tetti",
+      "body": "Nuovo articolo: Sussidiarietà nel territorio"
+    },
+    "sound": "default"
+  },
+  "content_type": "article",
+  "content_id": "<uuid>",
+  "url": "https://www.suitetti.org/articoli/sussidiarieta-nel-territorio"
+}
+```
+
+**Canonical push URL domain**: `https://www.suitetti.org`
+
+**URL path format**:
+- Articles: `https://www.suitetti.org/articoli/{slug}`
+- Events: `https://www.suitetti.org/eventi/{slug}`
+- Documents: `https://www.suitetti.org/documenti/{slug}`
+
+The iOS app parses `content_type`, `content_id`, and `url` via `NotificationDeepLink(userInfo:)` for deep link routing on tap.
+
+**APNs environment**: `APNS_ENV` Supabase secret must be set to `production` for TestFlight and App Store builds. Debug/Simulator builds use `sandbox`.

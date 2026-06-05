@@ -2,25 +2,48 @@ import SwiftUI
 
 struct DocumentiView: View {
     @Environment(DocumentStore.self) private var store
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    @State private var refreshHaptic = false
 
     var body: some View {
         Group {
             if store.isLoading {
                 loadingView
             } else if let message = store.errorMessage {
-                errorView(message: message)
+                EmptyStateView(
+                    icon: "wifi.slash",
+                    title: "Connessione non disponibile",
+                    subtitle: message,
+                    iconTint: .brandGray,
+                    primaryLabel: "Riprova",
+                    primaryAction: { Task { await store.refresh() } }
+                )
+                .background(.brandCream)
             } else if store.documents.isEmpty {
-                emptyView
+                EmptyStateView(
+                    icon: "doc.on.doc",
+                    title: "Nessun documento",
+                    subtitle: "Non sono presenti documenti al momento."
+                )
+                .background(.brandCream)
             } else {
                 documentList
                     .appearAnimation()
             }
         }
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(.brandCream, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .task { await store.load() }
-        .refreshable { await store.refresh() }
+        .refreshable {
+            await store.refresh()
+            refreshHaptic.toggle()
+        }
+        .sensoryFeedback(.success, trigger: refreshHaptic)
     }
 
-    // MARK: - States
+    // MARK: - Document list
 
     private var documentList: some View {
         ScrollView {
@@ -54,57 +77,43 @@ struct DocumentiView: View {
                     .strokeBorder(.white.opacity(0.75), lineWidth: 0.5)
             }
             .shadow(color: .black.opacity(0.06), radius: 7, x: 0, y: 2)
+            // Constrain to readable width on iPad, center it
+            .frame(maxWidth: horizontalSizeClass == .regular ? DT.readableMaxWidth : .infinity)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, DT.padding)
             .padding(.vertical, 12)
             .padding(.bottom, 100)
         }
+        .background(.brandCream)
     }
+
+    // MARK: - Loading
 
     private var loadingView: some View {
         ScrollView {
             SkeletonLoadingList()
+                .frame(maxWidth: horizontalSizeClass == .regular ? DT.readableMaxWidth : .infinity)
+                .frame(maxWidth: .infinity)
                 .padding(.top, 16)
         }
         .scrollIndicators(.hidden)
-    }
-
-    private func errorView(message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "wifi.slash")
-                .font(.system(size: 40))
-                .foregroundStyle(.brandGrayLight)
-            Text(message)
-                .font(.system(size: 15))
-                .foregroundStyle(.brandGray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button("Riprova") {
-                Task { await store.refresh() }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.brandRed)
-            .accessibilityLabel("Riprova il caricamento dei documenti")
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var emptyView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "doc.on.doc")
-                .font(.system(size: 40))
-                .foregroundStyle(.brandGrayLight)
-            Text("Nessun documento disponibile.")
-                .font(.system(size: 15))
-                .foregroundStyle(.brandGray)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.brandCream)
     }
 }
 
-#Preview {
+#Preview("Documenti – Light") {
     NavigationStack {
         DocumentiView()
             .navigationTitle("Documenti")
     }
     .environment(DocumentStore(service: StubDocumentService()))
+}
+
+#Preview("Documenti – Dark") {
+    NavigationStack {
+        DocumentiView()
+            .navigationTitle("Documenti")
+    }
+    .environment(DocumentStore(service: StubDocumentService()))
+    .preferredColorScheme(.dark)
 }

@@ -3,20 +3,74 @@ import SwiftUI
 struct ArticlesListSection: View {
     let filtered: [Article]
     let showFeatured: Bool
+    /// When set (iPad split panel), tapping a row calls this closure instead of pushing a NavigationLink.
+    var onSelect: ((Article) -> Void)? = nil
+    /// Highlights the currently selected article in the left panel list.
+    var selectedArticle: Article? = nil
+
+    @Namespace private var zoomNamespace
+
+    // When showing the featured card, the first article is the hero;
+    // the list below shows the rest to avoid duplication.
+    private var featuredArticle: Article? {
+        showFeatured ? filtered.first : nil
+    }
+
+    private var listArticles: [Article] {
+        showFeatured ? Array(filtered.dropFirst()) : filtered
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            if showFeatured {
-                ArticlesFeaturedCard()
+            // Featured hero card — only when "Tutto" and articles exist
+            if let featured = featuredArticle {
+                featuredCardLink(for: featured)
+                    .buttonStyle(.plain)
                     .padding(.horizontal, DT.padding)
                     .padding(.bottom, 18)
             }
 
-            articleList
-                .padding(.horizontal, DT.padding)
-                .padding(.bottom, 8)
+            // Article list
+            if listArticles.isEmpty {
+                if !showFeatured {
+                    emptyFilteredState
+                        .padding(.horizontal, DT.padding)
+                }
+                // When showFeatured but only one article exists: just the hero.
+            } else {
+                articleList
+                    .padding(.horizontal, DT.padding)
+                    .padding(.bottom, 16)
+            }
+
+            // Clearance for floating tab bar — must not intercept taps above it
+            Color.clear.frame(height: 130).allowsHitTesting(false)
         }
     }
+
+    // MARK: - Featured card
+
+    @ViewBuilder
+    private func featuredCardLink(for article: Article) -> some View {
+        if let onSelect {
+            Button { onSelect(article) } label: {
+                ArticlesFeaturedCard(
+                    article: article,
+                    isSelected: selectedArticle?.id == article.id
+                )
+            }
+        } else {
+            NavigationLink {
+                ArticleDetailView(article: article)
+                    .navigationTransition(.zoom(sourceID: article.id, in: zoomNamespace))
+            } label: {
+                ArticlesFeaturedCard(article: article, isSelected: false)
+                    .matchedTransitionSource(id: article.id, in: zoomNamespace)
+            }
+        }
+    }
+
+    // MARK: - List
 
     private var articleList: some View {
         VStack(spacing: 0) {
@@ -24,14 +78,8 @@ struct ArticlesListSection: View {
                 .fill(.white.opacity(0.8))
                 .frame(height: 1)
 
-            ForEach(Array(filtered.enumerated()), id: \.element.id) { index, article in
-                NavigationLink(destination: ArticleDetailView(article: article)) {
-                    ArticleListRow(
-                        article: article,
-                        isLast: index == filtered.count - 1
-                    )
-                }
-                .buttonStyle(PressableCardStyle())
+            ForEach(Array(listArticles.enumerated()), id: \.element.id) { index, article in
+                articleRow(article, isLast: index == listArticles.count - 1)
             }
         }
         .background(.white.opacity(0.82))
@@ -41,59 +89,116 @@ struct ArticlesListSection: View {
                 .strokeBorder(.white.opacity(0.75), lineWidth: 0.5)
         }
         .shadow(color: .black.opacity(0.06), radius: 7, x: 0, y: 2)
-        .shadow(color: .black.opacity(0.04), radius: 1, x: 0, y: 0.5)
+    }
+
+    @ViewBuilder
+    private func articleRow(_ article: Article, isLast: Bool) -> some View {
+        if let onSelect {
+            Button {
+                onSelect(article)
+            } label: {
+                ArticleListRow(article: article, isLast: isLast)
+                    .background(
+                        selectedArticle?.id == article.id
+                        ? Color.brandRed.opacity(0.05)
+                        : Color.clear
+                    )
+            }
+            .buttonStyle(PressableCardStyle())
+        } else {
+            NavigationLink {
+                ArticleDetailView(article: article)
+                    .navigationTransition(.zoom(sourceID: article.id, in: zoomNamespace))
+            } label: {
+                ArticleListRow(article: article, isLast: isLast)
+                    .matchedTransitionSource(id: article.id, in: zoomNamespace)
+            }
+            .buttonStyle(PressableCardStyle())
+        }
+    }
+
+    // MARK: - Empty state (specific category with no articles)
+
+    private var emptyFilteredState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 32))
+                .foregroundStyle(.brandGrayLight)
+            Text("Nessun articolo in questa categoria.")
+                .font(.system(size: 15))
+                .foregroundStyle(.brandGrayLight)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
     }
 }
 
+// MARK: - Featured hero card
+
 private struct ArticlesFeaturedCard: View {
+    let article: Article
+    var isSelected: Bool = false
+
     var body: some View {
         ZStack(alignment: .bottomLeading) {
+            // Article image — falls back to branded gradient if nil or load fails
+            RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
+                .frame(height: 230)
+                .frame(maxWidth: .infinity)
+                .clipped()
+
+            // Bottom vignette for text legibility
             LinearGradient(
-                colors: [.brandRed, Color(red: 192/255, green: 20/255, blue: 30/255),
-                         Color(red: 139/255, green: 14/255, blue: 21/255)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
+                colors: [
+                    .clear,
+                    .black.opacity(0.18),
+                    .black.opacity(0.65),
+                ],
+                startPoint: .center,
+                endPoint: .bottom
             )
-            .frame(height: 230)
 
-            Circle().fill(.white.opacity(0.08))
-                .frame(width: 180, height: 180)
-                .offset(x: 260, y: -110)
+            // Category chip
+            CategoryChip(
+                text: article.category,
+                color: .white,
+                background: .black.opacity(0.38)
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(16)
 
-            Circle().fill(.black.opacity(0.06))
-                .frame(width: 120, height: 120)
-                .offset(x: -10, y: -80)
-
-            CategoryChip(text: "In evidenza", color: .white, background: .white.opacity(0.18))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(18)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Ditelo sui Tetti: un anno di voce civica in Italia")
+            // Title + metadata
+            VStack(alignment: .leading, spacing: 5) {
+                Text(article.title)
                     .font(.system(size: 17, weight: .black))
                     .foregroundStyle(.white)
                     .kerning(-0.4)
                     .lineLimit(2)
+                    .shadow(color: .black.opacity(0.25), radius: 2, x: 0, y: 1)
 
                 HStack(spacing: 6) {
-                    Text("16 mag 2026")
+                    Text(article.fullDate)
                     Circle()
+                        .fill(.white.opacity(0.45))
                         .frame(width: 2.5, height: 2.5)
-                        .foregroundStyle(.white.opacity(0.4))
-                    Text("5 min di lettura")
+                    Text(article.readTime + " di lettura")
                 }
                 .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.white.opacity(0.75))
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.thinMaterial)
-            .overlay(alignment: .top) {
-                Rectangle().fill(.white.opacity(0.18)).frame(height: 0.5)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 18)
+        }
+        .frame(height: 230)
+        .clipShape(.rect(cornerRadius: DT.cornerRadius))
+        .overlay {
+            if isSelected {
+                RoundedRectangle(cornerRadius: DT.cornerRadius)
+                    .strokeBorder(.brandRed, lineWidth: 2)
             }
         }
-        .clipShape(.rect(cornerRadius: DT.cornerRadius))
-        .shadow(color: .brandRed.opacity(0.22), radius: 14, x: 0, y: 6)
-        .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
+        .shadow(color: .black.opacity(0.14), radius: 14, x: 0, y: 6)
+        .shadow(color: .black.opacity(0.06), radius: 3, x: 0, y: 1)
     }
 }

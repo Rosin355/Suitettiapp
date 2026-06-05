@@ -5,6 +5,16 @@ import UIKit
 struct DiteloSuiTettiApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
+    init() {
+        // Enlarge the shared URL cache so AsyncImage doesn't evict article images
+        // between the Home tab load and ArticoliView render (default is only 20 MB).
+        URLCache.shared = URLCache(
+            memoryCapacity: 50_000_000,   // 50 MB
+            diskCapacity:  200_000_000,   // 200 MB
+            diskPath: nil
+        )
+    }
+
     @State private var store         = ArticleStore()
     @State private var eventStore    = EventStore()
     @State private var documentStore = DocumentStore()
@@ -15,10 +25,14 @@ struct DiteloSuiTettiApp: App {
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding      = false
     @State private var showNotificationPrompt                             = false
 
+    // Screenshot capture mode: launch with --screenshots to bypass onboarding and inject
+    // deterministic demo content. Use in Xcode scheme or App Store Connect automation.
+    private let isScreenshotMode = ProcessInfo.processInfo.arguments.contains("--screenshots")
+
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if hasSeenOnboarding {
+                if hasSeenOnboarding || isScreenshotMode {
                     ContentView()
                         .environment(store)
                         .environment(eventStore)
@@ -64,6 +78,14 @@ struct DiteloSuiTettiApp: App {
     // MARK: - Content loading
 
     private func loadContent() async {
+        if isScreenshotMode {
+            store.replace(with: AppStorePreviewData.articles)
+            eventStore.replace(with: AppStorePreviewData.events)
+            documentStore.replace(with: AppStorePreviewData.documents)
+            router.contentDidLoad = true
+            return
+        }
+
         let notifStatus = await LocalNotificationManager.shared.authorizationStatus()
         if notifStatus == .authorized || notifStatus == .provisional || notifStatus == .ephemeral {
             UIApplication.shared.registerForRemoteNotifications()
@@ -87,6 +109,12 @@ struct DiteloSuiTettiApp: App {
             store.replace(with: payload.articles)
             eventStore.replace(with: payload.events)
             documentStore.replace(with: payload.documents)
+            for article in payload.articles.prefix(5) {
+                NSLog("[ContentLoad] article '%@' imageURL: %@ attachments: %d",
+                      article.slug,
+                      article.imageURL?.absoluteString ?? "nil",
+                      article.relatedDocuments.count)
+            }
             try? cache.clearAndReplace(with: payload)
 
             // Schedule notifications for newly detected content (only when cache existed before)

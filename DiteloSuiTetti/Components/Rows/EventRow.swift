@@ -23,8 +23,7 @@ struct EventRow: View {
                 .padding(.vertical, 7)
                 .background(.brandRed.opacity(0.1))
                 .clipShape(.rect(cornerRadius: 12))
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(day) \(month)")
+                .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -40,9 +39,12 @@ struct EventRow: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(day) \(month). \(title). \(place).")
 
             if !isLast {
                 Divider().padding(.leading, 74)

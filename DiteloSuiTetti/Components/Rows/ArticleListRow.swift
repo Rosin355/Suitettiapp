@@ -25,11 +25,11 @@ struct ArticleListRow: View {
 
                     HStack(spacing: 5) {
                         Text(article.fullDate)
-                        Circle().frame(width: 2.5, height: 2.5).foregroundStyle(.brandGrayLight)
+                        Circle().frame(width: 2.5, height: 2.5).foregroundStyle(.brandGray)
                         Text(article.readTime)
                     }
                     .font(.system(size: 12))
-                    .foregroundStyle(.brandGrayLight)
+                    .foregroundStyle(.brandGray)
                 }
 
                 Spacer(minLength: 0)
@@ -41,6 +41,8 @@ struct ArticleListRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 13)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(article.category). \(article.title). \(article.fullDate), \(article.readTime) di lettura.")
 
             if !isLast {
                 Divider().padding(.leading, 88)

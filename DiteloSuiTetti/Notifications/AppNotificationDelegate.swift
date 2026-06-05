@@ -17,9 +17,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        #if DEBUG
-        print("[APNs] ▶ registration succeeded — token prefix: \(String(token.prefix(8)))…")
-        #endif
+        NSLog("[APNs] ✓ registration succeeded — token prefix: %@…", String(token.prefix(8)))
         Task {
             await PushTokenRegistrationService.shared.register(deviceToken: token)
         }
@@ -29,9 +27,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        #if DEBUG
-        print("[APNs] ✗ registration failed — \(error.localizedDescription)")
-        #endif
+        NSLog("[APNs] ✗ registration failed — %@", error.localizedDescription)
     }
 }
 
@@ -47,6 +43,9 @@ final class NotificationCenterDelegate: NSObject, UNUserNotificationCenterDelega
         willPresent notification: UNNotification,
         withCompletionHandler handler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        let id = notification.request.identifier
+        let isRemote = notification.request.trigger is UNPushNotificationTrigger
+        NSLog("[APNs] 📲 foreground notification — id: %@ remote: %d", id, isRemote ? 1 : 0)
         handler([.banner, .sound])
     }
 
@@ -57,6 +56,8 @@ final class NotificationCenterDelegate: NSObject, UNUserNotificationCenterDelega
         withCompletionHandler handler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
+        let isRemote = response.notification.request.trigger is UNPushNotificationTrigger
+        NSLog("[APNs] 👆 notification tapped — remote: %d userInfo keys: %@", isRemote ? 1 : 0, Array(userInfo.keys))
         if let link = NotificationDeepLink(userInfo: userInfo) {
             Task { @MainActor in
                 AppDeepLinkRouter.shared.handle(link)

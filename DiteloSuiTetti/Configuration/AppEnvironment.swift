@@ -37,6 +37,8 @@ enum AppEnvironment {
     static var privacyPolicyURL: URL { websiteURL.appendingPathComponent("privacy") }
     static var termsURL: URL        { websiteURL.appendingPathComponent("termini") }
 
+    static let digitalYoginURL = URL(string: "https://www.digitalyogin.com")!
+
     // MARK: - Endpoints
 
     static var syncEditorialEndpoint: URL {

@@ -14,21 +14,22 @@ extension EventDTO {
         }
 
         return Event(
-            id:          id,
-            title:       titolo,
-            slug:        slug,
-            type:        tipo,
-            day:         day.isEmpty   ? "--"  : day,
-            monthShort:  month.isEmpty ? "---" : month,
-            fullDate:    full.isEmpty  ? dataEvento : full,
-            time:        dispTime,
-            location:    luogo,
-            description: descrizione,
-            link:        link.flatMap { URL(string: $0) },
-            imageURL:    immagineUrl.flatMap { URL(string: $0) },
-            rawDate:     rawDate,
-            updatedAt:   updatedAt,
-            syncVersion: syncVersion
+            id:               id,
+            title:            titolo,
+            slug:             slug,
+            type:             tipo,
+            day:              day.isEmpty   ? "--"  : day,
+            monthShort:       month.isEmpty ? "---" : month,
+            fullDate:         full.isEmpty  ? dataEvento : full,
+            time:             dispTime,
+            location:         luogo,
+            description:      descrizione,
+            link:             link.flatMap { URL(string: $0) },
+            imageURL:         immagineUrl.flatMap { URL(string: $0) },
+            rawDate:          rawDate,
+            updatedAt:        updatedAt,
+            syncVersion:      syncVersion,
+            relatedDocuments: attachments
         )
     }
 }

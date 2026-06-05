@@ -2,7 +2,12 @@ import SwiftUI
 
 struct ArticleDetailView: View {
     let article: Article
+    /// When `true`, the view is embedded in an iPad split panel (not pushed via NavigationLink).
+    /// Suppresses the floating back button and removes the top-edge safe area override.
+    var isEmbedded: Bool = false
+
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var plainBody: String {
         HTMLTextFormatter.plainText(from: article.body)
@@ -19,17 +24,28 @@ struct ArticleDetailView: View {
         return body.isEmpty || !body.hasPrefix(excerpt)
     }
 
+    /// Hero image height — reduced when embedded in iPad panel.
+    private var heroHeight: CGFloat {
+        isEmbedded ? 240 : 340
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 heroSection
-                titleCardSection
-                contentSection
+                // Constrain title + body to a readable max-width so text does not span
+                // the full detail panel on iPad (which can be 700–900pt wide).
+                VStack(spacing: 0) {
+                    titleCardSection
+                    contentSection
+                }
+                .frame(maxWidth: DT.readableMaxWidth)
+                .frame(maxWidth: .infinity)
             }
             .containerRelativeFrame(.horizontal)
         }
         .scrollIndicators(.hidden)
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea(edges: isEmbedded ? [] : [.top])
         .background(.brandCream)
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -37,7 +53,9 @@ struct ArticleDetailView: View {
         }
         .overlay(alignment: .top) {
             HStack(alignment: .top) {
-                backButton
+                if !isEmbedded {
+                    backButton
+                }
                 Spacer()
                 shareButton
             }
@@ -53,7 +71,7 @@ struct ArticleDetailView: View {
         DetailHeroImage(
             imageURL: article.imageURL,
             fallbackColors: article.thumbnailColors,
-            height: 340
+            height: heroHeight
         )
     }
 
@@ -89,7 +107,7 @@ struct ArticleDetailView: View {
                     .lineSpacing(8)
                     .padding(.horizontal, 24)
                     .padding(.top, shouldShowExcerpt ? 16 : 24)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 24)
             } else if !article.excerpt.isEmpty {
                 Text(article.excerpt)
                     .font(.system(size: 17))
@@ -97,7 +115,7 @@ struct ArticleDetailView: View {
                     .lineSpacing(8)
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 24)
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "doc.text")
@@ -109,10 +127,47 @@ struct ArticleDetailView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 48)
-                .padding(.bottom, 100)
+                .padding(.bottom, 24)
             }
+
+            relatedDocumentsSection
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            NSLog("[ArticleDetailView] opened slug '%@' relatedDocs: %d",
+                  article.slug, article.relatedDocuments.count)
+        }
+    }
+
+    @ViewBuilder
+    private var relatedDocumentsSection: some View {
+        if !article.relatedDocuments.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Rectangle()
+                    .fill(.brandSep)
+                    .frame(height: 1)
+                    .padding(.horizontal, 24)
+
+                Text("Documenti allegati")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.brandGray)
+                    .textCase(.uppercase)
+                    .kerning(0.5)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    .padding(.bottom, 12)
+
+                VStack(spacing: 8) {
+                    ForEach(article.relatedDocuments) { doc in
+                        LinkedDocumentCard(document: doc)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 100)
+            }
+        } else {
+            Color.clear.frame(height: 100).allowsHitTesting(false)
+        }
     }
 
     private var metadataRow: some View {
@@ -138,7 +193,7 @@ struct ArticleDetailView: View {
             Image(systemName: "chevron.left")
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
                 .background(
                     Circle()
                         .fill(.black.opacity(0.35))
@@ -155,7 +210,7 @@ struct ArticleDetailView: View {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .background(
                         Circle()
                             .fill(.black.opacity(0.35))
@@ -187,15 +242,7 @@ struct ArticleDetailView: View {
     .environment(ArticleStore(service: StubEditorialService()))
 }
 
-#Preview("Long title (real)") {
-    NavigationStack {
-        ArticleDetailView(article: Article(
-            category: "Non autosufficienza",
-            categoryColor: .brandRed,
-            thumbnailColors: [.brandRed],
-            title: "Non autosufficienza, Napolitano (Sui Tetti): con i 3 miliardi per i più fragili dal vice ministro Bellucci iniziativa strategica",
-            date: "20 mag", fullDate: "20 mag 2026", readTime: "5 min"
-        ))
-    }
-    .environment(ArticleStore(service: StubEditorialService()))
+#Preview("iPad embedded") {
+    ArticleDetailView(article: Article.all[0], isEmbedded: true)
+        .environment(ArticleStore(service: StubEditorialService()))
 }

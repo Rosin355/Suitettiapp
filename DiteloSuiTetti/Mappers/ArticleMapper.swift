@@ -29,18 +29,34 @@ extension ArticleDTO {
         let dateShort = dataPubblicazione.map { shortDateFormatter.string(from: $0) } ?? "Data non disponibile"
         let dateFull  = dataPubblicazione.map { fullDateFormatter.string(from: $0)  } ?? "Data non disponibile"
         return Article(
-            id:              id,
-            slug:            slug,
-            category:        categoria,
-            categoryColor:   categoryColor,
-            thumbnailColors: thumbnailColors,
-            title:           sentenceCase(titolo),
-            date:            dateShort,
-            fullDate:        dateFull,
-            readTime:        "\(readMinutes) min",
-            excerpt:         estratto,
-            body:            contenuto,
-            imageURL:        immagineUrl.flatMap { URL(string: $0) }
+            id:               id,
+            slug:             slug,
+            category:         categoria,
+            categoryColor:    categoryColor,
+            thumbnailColors:  thumbnailColors,
+            title:            sentenceCase(titolo),
+            date:             dateShort,
+            fullDate:         dateFull,
+            readTime:         "\(readMinutes) min",
+            excerpt:          estratto,
+            body:             contenuto,
+            imageURL:         ArticleDTO.parseImageURL(immagineUrl, slug: slug),
+            relatedDocuments: attachments
         )
+    }
+
+    /// Parses the image URL string, with a percent-encoding fallback for URLs
+    /// that contain spaces or non-ASCII characters (common in Italian filenames).
+    private static func parseImageURL(_ raw: String?, slug: String) -> URL? {
+        guard let raw, !raw.isEmpty else { return nil }
+        if let url = URL(string: raw) { return url }
+        // Fallback: percent-encode characters that are invalid in URL strings
+        if let encoded = raw.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+           let url = URL(string: encoded) {
+            NSLog("[ArticleMapper] ⚠️ imageURL needed percent-encoding for slug '%@'", slug)
+            return url
+        }
+        NSLog("[ArticleMapper] ✗ imageURL unparseable for slug '%@': %@", slug, raw)
+        return nil
     }
 }

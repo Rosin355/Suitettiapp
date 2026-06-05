@@ -11,9 +11,13 @@ struct ArticleDTO: Decodable {
     let immagineUrl: String?
     let updatedAt: Date?
     let syncVersion: Int
+    /// PDF/document attachments decoded from `attachments` or `allegati` array.
+    let attachments: [RelatedDocument]
 
     private enum CodingKeys: String, CodingKey {
-        case id, titolo, slug, categoria, dataPubblicazione, estratto, contenuto, immagineUrl, updatedAt, syncVersion
+        case id, titolo, slug, categoria, dataPubblicazione, estratto, contenuto
+        case immagineUrl, updatedAt, syncVersion
+        case attachments, allegati
     }
 
     init(from decoder: Decoder) throws {
@@ -36,5 +40,10 @@ struct ArticleDTO: Decodable {
         if updatedAt == nil {
             NSLog("[ArticleDTO] ⚠️ updatedAt missing/invalid for slug '%@'", slug)
         }
+
+        let rawAttachments = (try? c.decode([AttachmentDTO].self, forKey: .attachments))
+            ?? (try? c.decode([AttachmentDTO].self, forKey: .allegati))
+            ?? []
+        attachments = rawAttachments.map { $0.toRelatedDocument() }
     }
 }

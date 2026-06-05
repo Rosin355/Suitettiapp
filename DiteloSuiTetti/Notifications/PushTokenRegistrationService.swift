@@ -9,8 +9,13 @@ final class PushTokenRegistrationService {
 
     func register(deviceToken: String) async {
         let previous = UserDefaults.standard.string(forKey: lastTokenKey)
-        guard deviceToken != previous else { return }
+        guard deviceToken != previous else {
+            NSLog("[PushTokenRegistrationService] ↩ token unchanged — skipping registration")
+            return
+        }
 
+        // TestFlight and App Store builds are Release → "production".
+        // Simulator and direct Xcode runs are Debug → "sandbox".
         let environment: String
         #if DEBUG
         environment = "sandbox"
@@ -27,7 +32,13 @@ final class PushTokenRegistrationService {
             "buildNumber": (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String) ?? ""
         ]
 
-        guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
+        NSLog("[PushTokenRegistrationService] ▶ registering — prefix: %@… env: %@",
+              String(deviceToken.prefix(8)), environment)
+
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else {
+            NSLog("[PushTokenRegistrationService] ✗ JSON serialization failed")
+            return
+        }
 
         var request = URLRequest(url: AppEnvironment.registerPushTokenEndpoint, timeoutInterval: 15)
         request.httpMethod = "POST"
@@ -35,27 +46,20 @@ final class PushTokenRegistrationService {
         request.setValue("DiteloSuiTetti-iOS/1.0", forHTTPHeaderField: "User-Agent")
         request.httpBody = body
 
-        #if DEBUG
-        print("[PushTokenRegistrationService] ▶ registering token prefix: \(String(deviceToken.prefix(8)))…")
-        #endif
-
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else { return }
+            guard let http = response as? HTTPURLResponse else {
+                NSLog("[PushTokenRegistrationService] ✗ unexpected response type")
+                return
+            }
             if (200..<300).contains(http.statusCode) {
                 UserDefaults.standard.set(deviceToken, forKey: lastTokenKey)
-                #if DEBUG
-                print("[PushTokenRegistrationService] ✓ token registered (HTTP \(http.statusCode))")
-                #endif
+                NSLog("[PushTokenRegistrationService] ✓ registered (HTTP %d)", http.statusCode)
             } else {
-                #if DEBUG
-                print("[PushTokenRegistrationService] ✗ registration failed — HTTP \(http.statusCode)")
-                #endif
+                NSLog("[PushTokenRegistrationService] ✗ server rejected — HTTP %d", http.statusCode)
             }
         } catch {
-            #if DEBUG
-            print("[PushTokenRegistrationService] ✗ registration error — \(error.localizedDescription)")
-            #endif
+            NSLog("[PushTokenRegistrationService] ✗ network error — %@", error.localizedDescription)
         }
     }
 }

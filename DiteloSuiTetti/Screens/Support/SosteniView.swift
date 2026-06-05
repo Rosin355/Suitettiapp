@@ -26,7 +26,8 @@ struct SosteniView: View {
         .scrollIndicators(.hidden)
         .background(.brandCream)
         .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarBackground(.brandCream, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .onTapGesture(count: 5) { showDiagnostics = true }
         .sheet(isPresented: $showDiagnostics) { SyncDiagnosticsView() }
     }

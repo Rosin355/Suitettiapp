@@ -3,20 +3,28 @@ import SwiftUI
 struct HomeView: View {
     @Binding var selectedTab: AppTab
     @State private var scrolledPastHero = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
+                // Hero + ticker span the full width on all devices
                 HomeHeroSection()
                 HeroTickerView()
                     .frame(maxWidth: .infinity)
-                HomeFeaturedArticlesSection(selectedTab: $selectedTab)
-                HomeEventsSection()
-                HomeQuoteSection()
-                HomeReferendumCTA()
-                    .padding(.bottom, 8)
-                // Ensures last card scrolls fully above the floating glass tab bar
-                Color.clear.frame(height: 130)
+
+                // Editorial content is constrained to a readable width on iPad
+                VStack(spacing: 0) {
+                    HomeFeaturedArticlesSection(selectedTab: $selectedTab)
+                    HomeEventsSection()
+                    HomeQuoteSection()
+                    HomeReferendumCTA()
+                        .padding(.bottom, 8)
+                    // Ensures last card scrolls fully above the floating glass tab bar
+                    Color.clear.frame(height: 130)
+                }
+                .frame(maxWidth: horizontalSizeClass == .regular ? DT.readableMaxWidth : .infinity)
+                .frame(maxWidth: .infinity)
             }
         }
         .scrollIndicators(.hidden)

@@ -16,6 +16,45 @@ struct Event: Identifiable {
     let rawDate: Date?      // parsed start date, used for calendar
     let updatedAt: Date?
     let syncVersion: Int
+    let relatedDocuments: [RelatedDocument]
+
+    // Custom init required because relatedDocuments must default to [] while
+    // keeping all other properties non-optional without synthesized init ambiguity.
+    init(
+        id: UUID,
+        title: String,
+        slug: String,
+        type: String,
+        day: String,
+        monthShort: String,
+        fullDate: String,
+        time: String,
+        location: String,
+        description: String,
+        link: URL?,
+        imageURL: URL?,
+        rawDate: Date?,
+        updatedAt: Date?,
+        syncVersion: Int,
+        relatedDocuments: [RelatedDocument] = []
+    ) {
+        self.id = id
+        self.title = title
+        self.slug = slug
+        self.type = type
+        self.day = day
+        self.monthShort = monthShort
+        self.fullDate = fullDate
+        self.time = time
+        self.location = location
+        self.description = description
+        self.link = link
+        self.imageURL = imageURL
+        self.rawDate = rawDate
+        self.updatedAt = updatedAt
+        self.syncVersion = syncVersion
+        self.relatedDocuments = relatedDocuments
+    }
 
     var isUpcoming: Bool {
         guard let raw = rawDate else { return false }

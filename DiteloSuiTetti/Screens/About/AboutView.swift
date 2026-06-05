@@ -1,22 +1,38 @@
 import SwiftUI
-import StoreKit
+
+// Consistent horizontal margin for all About content — matches SectionHeader.
+private let aboutHPad: CGFloat = 20
 
 struct AboutView: View {
+    @State private var showDonation = false
+    @State private var showRateApp  = false
+    @State private var showSocial   = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 AboutHeroSection()
                 AboutMissionSection()
-                AboutSupportCard()
-                    .padding(.top, 8)
-                AboutSettingsSection()
+                AboutSupportCTA { showDonation = true }
+                AboutSettingsSection(
+                    onShowSocial:   { showSocial = true },
+                    onShowRateApp:  { showRateApp = true }
+                )
                 AboutDeveloperSection()
             }
+            // Constrain card content to readable width on iPad
+            .frame(maxWidth: horizontalSizeClass == .regular ? DT.readableMaxWidth : .infinity)
+            .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)
         .background(.brandCream)
         .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarBackground(.brandCream, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
+        .sheet(isPresented: $showDonation) { SupportDonationSheet() }
+        .sheet(isPresented: $showRateApp)  { RateAppSheet() }
+        .sheet(isPresented: $showSocial)   { SocialLinksSheet() }
     }
 }
 
@@ -24,17 +40,15 @@ struct AboutView: View {
 
 private struct AboutHeroSection: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Ditelo sui Tetti è uno spazio civico ed editoriale nato per dare voce a chi crede nella famiglia, nella libertà educativa, nella sussidiarietà e nel bene comune.")
-                .font(.system(size: 17))
-                .foregroundStyle(.brandBlack.opacity(0.82))
-                .lineSpacing(5)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, DT.padding)
-        .padding(.top, 16)
-        .padding(.bottom, 24)
+        Text("Ditelo sui Tetti è uno spazio civico ed editoriale nato per dare voce a chi crede nella famiglia, nella libertà educativa, nella sussidiarietà e nel bene comune.")
+            .font(.system(size: 17))
+            .foregroundStyle(.brandBlack.opacity(0.82))
+            .lineSpacing(5)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, aboutHPad)
+            .padding(.top, 16)
+            .padding(.bottom, 24)
     }
 }
 
@@ -56,7 +70,7 @@ private struct AboutMissionSection: View {
                     PillarCard(pillar: pillar)
                 }
             }
-            .padding(.horizontal, DT.padding)
+            .padding(.horizontal, aboutHPad)
             .padding(.bottom, 16)
         }
     }
@@ -92,89 +106,104 @@ private struct PillarCard: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
 
-// MARK: - Support CTA
+// MARK: - Compact support CTA
 
-private struct AboutSupportCard: View {
+private struct AboutSupportCTA: View {
+    let onTap: () -> Void
+
     var body: some View {
-        GCard {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("iniziativa civica")
-                    .font(.georgiaItalic(13))
-                    .foregroundStyle(.brandGrayLight)
-                    .padding(.bottom, 10)
-
-                Text("Sostieni\nDitelo sui Tetti")
-                    .font(.system(size: 24, weight: .black))
-                    .foregroundStyle(.white)
-                    .kerning(-0.5)
-                    .lineSpacing(2)
-                    .padding(.bottom, 10)
-
-                Text("Il tuo contributo aiuta a far crescere una voce civica libera, indipendente e condivisa.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.white.opacity(0.65))
-                    .lineSpacing(3)
-                    .padding(.bottom, 20)
-
-                Button {
-                    if let url = URL(string: AppEnvironment.websiteURL.absoluteString) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    Text("Sostienici →")
-                        .font(.system(size: 16, weight: .semibold))
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.brandRed)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(height: 48)
-                        .padding(.horizontal, 22)
-                        .background(.brandRed)
-                        .clipShape(Capsule())
-                        .shadow(color: .brandRed.opacity(0.4), radius: 8, x: 0, y: 4)
                 }
-                .accessibilityLabel("Sostieni la rete civica")
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Sostieni Ditelo sui Tetti")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.white)
+                        .kerning(-0.3)
+                    Text("Il tuo contributo aiuta a far crescere una voce civica libera.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.65))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Scopri come")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
             }
-            .padding(22)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                ZStack(alignment: .topTrailing) {
-                    LinearGradient(
-                        colors: [.brandBlack, Color(red: 42/255, green: 42/255, blue: 42/255)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                    Circle()
-                        .fill(.brandRed.opacity(0.15))
-                        .frame(width: 120, height: 120)
-                        .offset(x: 20, y: -20)
-                }
+                LinearGradient(
+                    colors: [.brandBlack, Color(red: 42/255, green: 42/255, blue: 42/255)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
             }
+            .clipShape(.rect(cornerRadius: DT.cornerRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: DT.cornerRadius)
+                    .strokeBorder(.white.opacity(0.10), lineWidth: 0.5)
+            }
+            .cardShadow()
         }
-        .padding(.horizontal, DT.padding)
+        .buttonStyle(.plain)
+        .padding(.horizontal, aboutHPad)
+        .padding(.top, 8)
         .padding(.bottom, 14)
+        .accessibilityLabel("Sostieni Ditelo sui Tetti. Scopri come fare una donazione.")
     }
 }
 
 // MARK: - Settings rows
 
 private struct AboutSettingsSection: View {
-    @Environment(\.requestReview) private var requestReview
+    let onShowSocial:  () -> Void
+    let onShowRateApp: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             SectionHeader(title: "Impostazioni")
 
             VStack(spacing: 0) {
-                NavigationLink(destination: WebPageView(title: "Privacy Policy", url: AppEnvironment.privacyPolicyURL)) {
+                // Privacy Policy — native in-app screen
+                NavigationLink(destination: PrivacyPolicyView()) {
                     SettingsRow(icon: "lock.shield.fill", label: "Privacy Policy")
                 }
                 .buttonStyle(.plain)
 
+                // Termini e condizioni — hidden until ready
+                // NavigationLink(destination: WebPageView(title: "Termini e condizioni", url: AppEnvironment.termsURL)) {
+                //     SettingsRow(icon: "doc.text.fill", label: "Termini e condizioni")
+                // }
+                // .buttonStyle(.plain)
+
                 Divider().padding(.leading, 58)
 
-                NavigationLink(destination: WebPageView(title: "Termini e condizioni", url: AppEnvironment.termsURL)) {
-                    SettingsRow(icon: "doc.text.fill", label: "Termini e condizioni")
+                // Social links
+                Button { onShowSocial() } label: {
+                    SettingsRow(icon: "person.2.fill", label: "Seguici sui social")
                 }
                 .buttonStyle(.plain)
 
@@ -190,9 +219,7 @@ private struct AboutSettingsSection: View {
 
                 Divider().padding(.leading, 58)
 
-                Button {
-                    requestReview()
-                } label: {
+                Button { onShowRateApp() } label: {
                     SettingsRow(icon: "star.fill", label: "Valuta l'app")
                 }
                 .buttonStyle(.plain)
@@ -204,7 +231,7 @@ private struct AboutSettingsSection: View {
                     .strokeBorder(.white.opacity(0.75), lineWidth: 0.5)
             }
             .cardShadow()
-            .padding(.horizontal, DT.padding)
+            .padding(.horizontal, aboutHPad)
             .padding(.bottom, 16)
         }
     }
@@ -249,57 +276,137 @@ private struct AboutDeveloperSection: View {
     private let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
     private let build   = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
 
+    private let techStack1 = ["Swift", "SwiftUI", "SwiftData", "Supabase"]
+    private let techStack2 = ["PDFKit", "WebKit", "APNs"]
+
     var body: some View {
         VStack(spacing: 0) {
-            SectionHeader(title: "Sviluppo")
+            SectionHeader(title: "Sviluppo e tecnologia")
 
-            VStack(spacing: 0) {
-                infoRow(label: "Versione", value: "\(version) (\(build))")
-                Divider().padding(.leading, 16)
-                infoRow(label: "Partner tecnologico", value: "Digital Yogin srl")
-                Divider().padding(.leading, 16)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Sviluppo software, architettura iOS e integrazione backend.")
+            GCard {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Identity row
+                    HStack(spacing: 12) {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.brandRed.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                            .overlay {
+                                Image(systemName: "curlybraces")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(.brandRed)
+                            }
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Digital Yogin srl")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.brandBlack)
+                                .kerning(-0.3)
+                            Text("Partner tecnologico e sviluppo software")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.brandGray)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
+
+                    Divider().padding(.horizontal, 16)
+
+                    // Description
+                    Text("L'app SUITETTI è sviluppata con codice nativo Swift e SwiftUI, integrata con backend Supabase, caching locale e architettura mobile-first.")
                         .font(.system(size: 13))
                         .foregroundStyle(.brandGray)
                         .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .padding(.top, 12)
+                        .padding(.bottom, 12)
+
+                    // Tech stack chips
+                    VStack(alignment: .leading, spacing: 6) {
+                        techChipRow(techStack1)
+                        techChipRow(techStack2)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 14)
+
+                    Divider().padding(.horizontal, 16)
+
+                    // Website link
+                    Button {
+                        UIApplication.shared.open(AppEnvironment.digitalYoginURL)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Visita Digital Yogin")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.brandRed)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.brandRed.opacity(0.7))
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Visita il sito di Digital Yogin")
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .background(.white.opacity(0.82))
-            .clipShape(.rect(cornerRadius: DT.cornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: DT.cornerRadius)
-                    .strokeBorder(.white.opacity(0.75), lineWidth: 0.5)
-            }
-            .cardShadow()
-            .padding(.horizontal, DT.padding)
-            .padding(.bottom, 100)
+            .padding(.horizontal, aboutHPad)
+            .padding(.bottom, 14)
+
+            // Version footer — small and unobtrusive
+            Text("Versione \(version) (\(build))")
+                .font(.system(size: 12))
+                .foregroundStyle(.brandGrayLight)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.bottom, 140)
         }
     }
 
-    private func infoRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.system(size: 15))
-                .foregroundStyle(.brandBlack)
-            Spacer()
-            Text(value)
-                .font(.system(size: 15))
-                .foregroundStyle(.brandGray)
+    @ViewBuilder
+    private func techChipRow(_ chips: [String]) -> some View {
+        HStack(spacing: 6) {
+            ForEach(chips, id: \.self) { chip in
+                Text(chip)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.brandGray)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.brandGray.opacity(0.09))
+                    .clipShape(.rect(cornerRadius: 6))
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
     }
 }
 
-// MARK: - Preview
+// MARK: - Previews
 
-#Preview {
+#Preview("Chi siamo – Light") {
     NavigationStack {
         AboutView()
             .navigationTitle("Chi siamo")
     }
+}
+
+#Preview("Chi siamo – Dark") {
+    NavigationStack {
+        AboutView()
+            .navigationTitle("Chi siamo")
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Donation Sheet") {
+    SupportDonationSheet()
+}
+
+#Preview("Rate App Sheet") {
+    RateAppSheet()
+}
+
+#Preview("Social Links Sheet") {
+    SocialLinksSheet()
 }

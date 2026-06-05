@@ -18,6 +18,7 @@ final class CachedEvent {
     var rawDate: Date?
     var updatedAt: Date?
     var syncVersion: Int
+    var relatedDocumentsJSON: String?
 
     init(from event: Event) {
         id               = event.id
@@ -35,25 +36,31 @@ final class CachedEvent {
         rawDate          = event.rawDate
         updatedAt        = event.updatedAt
         syncVersion      = event.syncVersion
+        relatedDocumentsJSON = event.relatedDocuments.isEmpty ? nil :
+            (try? JSONEncoder().encode(event.relatedDocuments)).flatMap { String(data: $0, encoding: .utf8) }
     }
 
     func toEvent() -> Event {
-        Event(
-            id:          id,
-            title:       title,
-            slug:        slug,
-            type:        type,
-            day:         day,
-            monthShort:  monthShort,
-            fullDate:    fullDate,
-            time:        time,
-            location:    location,
-            description: eventDescription,
-            link:        linkString.flatMap { URL(string: $0) },
-            imageURL:    imageURLString.flatMap { URL(string: $0) },
-            rawDate:     rawDate,
-            updatedAt:   updatedAt,
-            syncVersion: syncVersion
+        let relatedDocuments: [RelatedDocument] = relatedDocumentsJSON
+            .flatMap { $0.data(using: .utf8) }
+            .flatMap { try? JSONDecoder().decode([RelatedDocument].self, from: $0) } ?? []
+        return Event(
+            id:               id,
+            title:            title,
+            slug:             slug,
+            type:             type,
+            day:              day,
+            monthShort:       monthShort,
+            fullDate:         fullDate,
+            time:             time,
+            location:         location,
+            description:      eventDescription,
+            link:             linkString.flatMap { URL(string: $0) },
+            imageURL:         imageURLString.flatMap { URL(string: $0) },
+            rawDate:          rawDate,
+            updatedAt:        updatedAt,
+            syncVersion:      syncVersion,
+            relatedDocuments: relatedDocuments
         )
     }
 }

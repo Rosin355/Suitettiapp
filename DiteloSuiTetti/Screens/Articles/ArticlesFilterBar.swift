@@ -3,6 +3,7 @@ import SwiftUI
 struct ArticlesFilterBar: View {
     @Binding var selectedCategory: String
     let categories: [String]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -10,15 +11,19 @@ struct ArticlesFilterBar: View {
                 ForEach(categories, id: \.self) { cat in
                     let isOn = selectedCategory == cat
                     Button(cat) {
-                        withAnimation(.easeInOut(duration: 0.18)) {
+                        if reduceMotion {
                             selectedCategory = cat
+                        } else {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                selectedCategory = cat
+                            }
                         }
                     }
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(isOn ? .white : .brandBlack)
                     .kerning(-0.2)
                     .padding(.horizontal, 18)
-                    .padding(.vertical, 9)
+                    .padding(.vertical, 14)
                     .background(
                         isOn
                             ? AnyShapeStyle(.brandBlack)

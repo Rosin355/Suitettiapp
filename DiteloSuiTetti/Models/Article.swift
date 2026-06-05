@@ -13,6 +13,7 @@ struct Article: Identifiable {
     let excerpt: String
     let body: String
     let imageURL: URL?
+    let relatedDocuments: [RelatedDocument]
 
     init(
         id: UUID = UUID(),
@@ -26,7 +27,8 @@ struct Article: Identifiable {
         readTime: String,
         excerpt: String = "",
         body: String = "",
-        imageURL: URL? = nil
+        imageURL: URL? = nil,
+        relatedDocuments: [RelatedDocument] = []
     ) {
         self.id = id
         self.slug = slug
@@ -40,5 +42,6 @@ struct Article: Identifiable {
         self.excerpt = excerpt
         self.body = body
         self.imageURL = imageURL
+        self.relatedDocuments = relatedDocuments
     }
 }

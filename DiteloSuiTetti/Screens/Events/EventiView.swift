@@ -8,7 +8,10 @@ private enum EventFilter: String, CaseIterable {
 
 struct EventiView: View {
     @Environment(EventStore.self) private var store
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     @State private var filter: EventFilter = .upcoming
+    @State private var refreshHaptic = false
 
     private var filteredEvents: [Event] {
         switch filter {
@@ -23,7 +26,15 @@ struct EventiView: View {
             if store.isLoading {
                 loadingView
             } else if let message = store.errorMessage {
-                errorView(message: message)
+                EmptyStateView(
+                    icon: "wifi.slash",
+                    title: "Connessione non disponibile",
+                    subtitle: message,
+                    iconTint: .brandGray,
+                    primaryLabel: "Riprova",
+                    primaryAction: { Task { await store.refresh() } }
+                )
+                .background(.brandCream)
             } else {
                 VStack(spacing: 0) {
                     filterBar
@@ -37,8 +48,14 @@ struct EventiView: View {
             }
         }
         .background(.brandCream)
+        .toolbarBackground(.brandCream, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .task { await store.load() }
-        .refreshable { await store.refresh() }
+        .refreshable {
+            await store.refresh()
+            refreshHaptic.toggle()
+        }
+        .sensoryFeedback(.success, trigger: refreshHaptic)
     }
 
     // MARK: - Filter bar
@@ -52,9 +69,11 @@ struct EventiView: View {
         .pickerStyle(.segmented)
         .padding(.horizontal, DT.padding)
         .padding(.vertical, 12)
+        .frame(maxWidth: horizontalSizeClass == .regular ? DT.readableMaxWidth : .infinity)
+        .frame(maxWidth: .infinity)
     }
 
-    // MARK: - List
+    // MARK: - Event list
 
     private var eventList: some View {
         ScrollView {
@@ -94,6 +113,8 @@ struct EventiView: View {
                     .strokeBorder(.white.opacity(0.75), lineWidth: 0.5)
             }
             .shadow(color: .black.opacity(0.06), radius: 7, x: 0, y: 2)
+            .frame(maxWidth: horizontalSizeClass == .regular ? DT.readableMaxWidth : .infinity)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, DT.padding)
             .padding(.vertical, 12)
             .padding(.bottom, 100)
@@ -106,50 +127,33 @@ struct EventiView: View {
     private var loadingView: some View {
         ScrollView {
             SkeletonLoadingList()
+                .frame(maxWidth: horizontalSizeClass == .regular ? DT.readableMaxWidth : .infinity)
+                .frame(maxWidth: .infinity)
                 .padding(.top, 16)
         }
         .scrollIndicators(.hidden)
-    }
-
-    private func errorView(message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "wifi.slash")
-                .font(.system(size: 40))
-                .foregroundStyle(.brandGrayLight)
-            Text(message)
-                .font(.system(size: 15))
-                .foregroundStyle(.brandGray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button("Riprova") { Task { await store.refresh() } }
-                .buttonStyle(.borderedProminent)
-                .tint(.brandRed)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.brandCream)
     }
 
     private var emptyView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "calendar")
-                .font(.system(size: 40))
-                .foregroundStyle(.brandGrayLight)
+        Group {
             if filter == .upcoming && !store.pastEvents.isEmpty {
-                Text("Nessun evento futuro.")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.brandGray)
-                Button("Consulta gli eventi passati") {
-                    filter = .past
-                }
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.brandRed)
-                .padding(.top, 4)
+                EmptyStateView(
+                    icon: "calendar",
+                    title: "Nessun evento futuro",
+                    subtitle: "Non ci sono eventi imminenti.",
+                    secondaryLabel: "Consulta gli eventi passati",
+                    secondaryAction: { filter = .past }
+                )
             } else {
-                Text("Nessun evento in programma.")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.brandGray)
+                EmptyStateView(
+                    icon: "calendar",
+                    title: "Nessun evento",
+                    subtitle: "Non ci sono eventi in programma."
+                )
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.brandCream)
     }
 
     // MARK: - Helpers

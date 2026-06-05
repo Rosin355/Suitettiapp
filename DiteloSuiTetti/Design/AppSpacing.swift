@@ -7,4 +7,6 @@ enum DT {
     static let sectionSpacing: CGFloat    = 12
     /// Height of HomeTopBar controls below the status bar (used to offset hero text content)
     static let topBarContentOffset: CGFloat = 62
+    /// Max readable content width on iPad — centers content on wide screens
+    static let readableMaxWidth: CGFloat  = 820
 }
