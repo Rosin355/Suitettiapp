@@ -4,6 +4,79 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-06-08 — Resilient article/event decoding after backend attachments update
+
+**Goal**: Restore articles and events after the backend `attachments[]` addition caused the entire sections to decode as empty (0 articles, 0 events, 25 documents).
+
+### Root cause
+
+`EditorialSyncResponseDTO` decoded articles and events using `[ArticleDTO]` / `[EventDTO]` (non-lossy). If a single item in the array failed, `try? c.decode([ArticleDTO].self, ...)` returned nil and the fallback was `[]`. Documents already used `[Lossy<DocumentDTO>]` (per-item isolation) and decoded fine — 25 items.
+
+The backend attachment update added `attachments: [...]` to articles and events. At least one item in each section contained data that caused `ArticleDTO.init(from:)` to throw (likely a non-optional required field missing/wrong type in a new backend format, or an attachment shape that propagated an error upward). The `try?` on the whole array masked the individual error.
+
+### Fix
+
+**`Models/EditorialSyncResponseDTO.swift`**:
+- Articles: changed to `[Lossy<ArticleDTO>]` — per-item isolation, exact same pattern as documents
+- Events: changed to `[Lossy<EventDTO>]` — per-item isolation
+- Added index-based per-item error log (first 5): `[EditorialSyncResponseDTO] ✗ article[N] error: ...`
+- Added "first article" diagnostic log: title, attachment count, first attachment title
+- Added "first event" diagnostic log: title, attachment count
+- Made `Lossy` struct **internal** (removed `private`) so `ArticleDTO`/`EventDTO` can use `Lossy<AttachmentDTO>`
+- Logs `key present: yes/no` when even the lossy array decode fails (key missing or wrong top-level type)
+
+**`Models/AttachmentDTO.swift`**:
+- Added `name`, `attachmentName` (`attachment_name` via `.convertFromSnakeCase`), `filename` as title fallback keys — covers all common file-metadata field names the backend may return
+
+**`Models/ArticleDTO.swift`** + **`Models/EventDTO.swift`**:
+- Changed attachment decoding to `[Lossy<AttachmentDTO>]` → `compactMap(\.value)` — one bad attachment never throws into the parent article/event decode
+
+### Build status
+
+`** BUILD SUCCEEDED **` — no new errors.
+
+### What to look for after deploying
+
+Filter Console.app by `[EditorialSyncResponseDTO]`:
+- `articles decoded: N` — should be > 0 now
+- `✗ article[N] error:` — identifies exactly which article and field failed before the fix
+- `first article: title='...' attachments=N` — confirms attachment data flows through
+
+Note: `PushTokenRegistrationService env: sandbox` in logs is expected for Xcode debug builds. TestFlight / App Store builds send `env: production`. Do not change push logic for this issue.
+
+---
+
+## 2026-06-08 — Persistent image cache: article thumbnails now load reliably everywhere
+
+**Goal**: Fix article thumbnails showing gradient placeholders in `ArticleListRow` (58×58) while the same image loaded correctly in the featured hero card (230px).
+
+### Root cause
+
+`AsyncImage` has no persistent disk cache — it relies on `URLCache.shared` (in-memory only). At 58×58, `AsyncImage` loses the cached image when a row scrolls off-screen, and re-requests the image each time it re-appears. This caused "many thumbnails show placeholder" because: rows scrolled past were evicted from memory cache; delta sync articles might have had `imageURLString = nil` in old SwiftData cache (field was added in RC).
+
+### Fix: NSCache + FileManager disk cache
+
+**New file: `DiteloSuiTetti/Utilities/ImageCache.swift`**
+- `@MainActor final class ImageCache` — singleton, no third-party dependencies
+- Load order: NSCache (memory, 100 items / 50MB) → FileManager `.cachesDirectory/DST_ImageCache/` → URLSession network
+- Hash-named disk files (`abs(url.hashValue).imgcache`), atomic writes
+- NSLog at every tier: `[ImageCache] memory:`, `disk:`, `fetch:`, `✓ saved:`, `✗ failed:`
+
+**Updated: `Components/Common/RemoteImageView.swift`**
+- Replaced `AsyncImage` with `@State private var uiImage: UIImage?` + `.task(id: url)` → `ImageCache.shared.image(for:)`
+- Same public API (url, contentMode, fallbackColors) — all existing callers unchanged
+- Shows `ProgressView` while loading; shows `Image(uiImage:)` on success; shows gradient when `url == nil` or load fails
+- When a row scrolls back into view: NSCache hit returns image instantly (< 1µs), no visible flash
+
+**Updated: `Components/Rows/ArticleListRow.swift`**
+- Added `.onAppear` diagnostic: `NSLog("[ArticleListRow] '<title>' imageURL=<url|nil>")` — reveals which articles have nil imageURL in SwiftData cache vs valid URLs
+
+### Build status
+
+`** BUILD SUCCEEDED **` — no new errors. Same 4 pre-existing warnings (deprecated `previewDevice`; actor isolation on store initializers).
+
+---
+
 ## 2026-06-06 — Release Candidate sync: attachments deployed, dark titles fixed, push backend updated
 
 **Goal**: Finalize v1.0 release candidate. Apply and document all remaining fixes before App Store submission.

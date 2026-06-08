@@ -17,7 +17,7 @@ Tasks are tracked here as the single source of truth across AI sessions.
 - [x] **Accessibility pass** — VoiceOver `.accessibilityElement(children: .combine)` + labels on list rows; 44×44pt tap targets; `.brandGray` for metadata contrast; Reduce Motion guards on all animations; Stage Manager adaptive panel widths
 - [x] **SwiftData offline cache** — `CachedArticle`, `CachedEvent`, `CachedDocument`; cache-first launch; non-blocking offline banner; `EditorialCacheRepository`
 - [x] **Unified sync coordinator** — single `sync-editorial` request at launch; `EditorialSyncCoordinator`; `?since=` delta parameter available
-- [x] **Resilient/lossy decoding** — `Lossy<T>` wrapper for per-item decode isolation; per-section fallback to `[]` in `EditorialSyncResponseDTO`; `Date.distantPast` fallback on malformed dates; NSLog always on for decode failures
+- [x] **Resilient/lossy decoding** — `Lossy<T>` wrapper (internal); articles, events, documents all decoded per-item; one bad item never empties section; index-based per-item error logs; `Date.distantPast` fallback; `AttachmentDTO` extended title fallbacks (`name`, `attachmentName`, `filename`)
 - [x] **SyncLogger + SyncDiagnosticsView** — 50-entry ring buffer; Console.app visible in all builds; 5-tap access from SosteniView
 - [x] **APNs push token registration** — device token registered on first launch; `PushTokenRegistrationService` deduplicates; `register-push-token` Edge Function deployed
 - [x] **Privacy Manifest** — `PrivacyInfo.xcprivacy` created (UserDefaults, Device ID/AppFunctionality); **must be added to Xcode target manually**
@@ -25,6 +25,7 @@ Tasks are tracked here as the single source of truth across AI sessions.
 - [x] **App icon** — 1024×1024 marketing icon present
 - [x] **Onboarding** — 3-slide onboarding with animated bokeh backgrounds; `@AppStorage("hasSeenOnboarding")` gate
 - [x] **URLCache hardening** — `URLCache.shared` enlarged to 50 MB memory / 200 MB disk to prevent image eviction between tabs
+- [x] **Persistent image cache** — `ImageCache` (NSCache 100 items/50MB + FileManager disk) replaces `AsyncImage` in `RemoteImageView`; load order: memory → disk → network; `[ImageCache]` + `[ArticleListRow]` NSLog diagnostics; consistent thumbnail loading at any frame size
 - [x] **Dark Mode navigation title fix** — all cream-background screens use `.toolbarBackground(.brandCream)` + `.toolbarColorScheme(.light)` so large titles render dark in both modes (`ArticoliView`, `DocumentiView`, `EventiView`, `AboutView`, `SosteniView`)
 - [x] **Article/Event PDF attachment support (iOS)** — full pipeline: `AttachmentDTO` → `RelatedDocument` → `CachedArticle/CachedEvent` (SwiftData JSON column) → `LinkedDocumentCard` in detail views
 - [x] **Backend: allegati migration deployed** — `public.allegati` table with polymorphic `parent_type + parent_id`, soft delete, `is_mobile_visible`, delta-sync trigger

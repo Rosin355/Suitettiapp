@@ -15,29 +15,76 @@ struct EditorialSyncResponseDTO: Decodable {
 
         serverTime = (try? c.decode(Date.self, forKey: .serverTime)) ?? Date()
 
-        if let arts = try? c.decode([ArticleDTO].self, forKey: .articles) {
-            articles = arts
+        // MARK: Articles — per-item lossy so one bad record never kills the whole section
+        if let lossyArts = try? c.decode([Lossy<ArticleDTO>].self, forKey: .articles) {
+            let good = lossyArts.compactMap(\.value)
+            let bad  = lossyArts.count - good.count
+            if bad > 0 {
+                NSLog("[EditorialSyncResponseDTO] ⚠️ %d/%d articles failed per-item decode",
+                      bad, lossyArts.count)
+                lossyArts.enumerated()
+                    .filter { $0.element.value == nil }
+                    .prefix(5)
+                    .forEach { i, lossy in
+                        if let e = lossy.decodeError {
+                            NSLog("[EditorialSyncResponseDTO] ✗ article[%d] error: %@", i, "\(e)")
+                        }
+                    }
+                SyncLogger.shared.append("articles: \(good.count) OK, \(bad) failed per-item")
+            }
+            NSLog("[EditorialSyncResponseDTO] articles decoded: %d", good.count)
+            if let first = good.first {
+                let firstAtt = first.attachments.first?.title ?? "none"
+                NSLog("[EditorialSyncResponseDTO] first article: title='%@' attachments=%d firstAtt='%@'",
+                      first.titolo, first.attachments.count, firstAtt)
+            }
+            articles = good
         } else {
             articles = []
-            NSLog("[EditorialSyncResponseDTO] ⚠️ articles section failed to decode — returning empty")
+            let keyPresent = c.contains(.articles)
+            NSLog("[EditorialSyncResponseDTO] ✗ articles top-level decode failed — key present: %@",
+                  keyPresent ? "yes (wrong type?)" : "no")
+            SyncLogger.shared.append("articles section: decode failed, key present=\(keyPresent)")
         }
 
-        if let evts = try? c.decode([EventDTO].self, forKey: .events) {
-            events = evts
+        // MARK: Events — per-item lossy
+        if let lossyEvts = try? c.decode([Lossy<EventDTO>].self, forKey: .events) {
+            let good = lossyEvts.compactMap(\.value)
+            let bad  = lossyEvts.count - good.count
+            if bad > 0 {
+                NSLog("[EditorialSyncResponseDTO] ⚠️ %d/%d events failed per-item decode",
+                      bad, lossyEvts.count)
+                lossyEvts.enumerated()
+                    .filter { $0.element.value == nil }
+                    .prefix(5)
+                    .forEach { i, lossy in
+                        if let e = lossy.decodeError {
+                            NSLog("[EditorialSyncResponseDTO] ✗ event[%d] error: %@", i, "\(e)")
+                        }
+                    }
+                SyncLogger.shared.append("events: \(good.count) OK, \(bad) failed per-item")
+            }
+            NSLog("[EditorialSyncResponseDTO] events decoded: %d", good.count)
+            if let first = good.first {
+                NSLog("[EditorialSyncResponseDTO] first event: title='%@' attachments=%d",
+                      first.titolo, first.attachments.count)
+            }
+            events = good
         } else {
             events = []
-            NSLog("[EditorialSyncResponseDTO] ⚠️ events section failed to decode — returning empty")
+            let keyPresent = c.contains(.events)
+            NSLog("[EditorialSyncResponseDTO] ✗ events top-level decode failed — key present: %@",
+                  keyPresent ? "yes (wrong type?)" : "no")
+            SyncLogger.shared.append("events section: decode failed, key present=\(keyPresent)")
         }
 
-        // Decode documents per-item so one bad record never kills the whole array.
-        // Lossy<DocumentDTO> always succeeds; items that throw are captured as nil.
+        // MARK: Documents — per-item lossy (unchanged)
         if let lossyDocs = try? c.decode([Lossy<DocumentDTO>].self, forKey: .documents) {
             let good = lossyDocs.compactMap(\.value)
             let bad  = lossyDocs.count - good.count
             if bad > 0 {
                 NSLog("[EditorialSyncResponseDTO] ⚠️ %d/%d documents failed per-item decode",
                       bad, lossyDocs.count)
-                // Log the first two per-item errors for diagnostics
                 lossyDocs.prefix(5).filter { $0.value == nil }.prefix(2).forEach { lossy in
                     if let e = lossy.decodeError {
                         NSLog("[EditorialSyncResponseDTO] ✗ document item error: %@", "\(e)")
@@ -48,7 +95,6 @@ struct EditorialSyncResponseDTO: Decodable {
             NSLog("[EditorialSyncResponseDTO] documents decoded: %d", good.count)
             documents = good
         } else {
-            // Key missing or wrong top-level type — log raw section for diagnostics
             documents = []
             NSLog("[EditorialSyncResponseDTO] ⚠️ documents key missing or wrong type — 0 documents")
             SyncLogger.shared.append("documents section: key missing or wrong type")
@@ -56,11 +102,12 @@ struct EditorialSyncResponseDTO: Decodable {
     }
 }
 
-// MARK: - Per-item lossy wrapper
+// MARK: - Lossy per-item wrapper
 
 /// Wraps T so that [Lossy<T>] array decoding never throws.
-/// Each element either decodes to value or is captured as nil with its error.
-private struct Lossy<T: Decodable>: Decodable {
+/// Each element either decodes successfully or is captured as nil with its error.
+/// Internal access so ArticleDTO / EventDTO can use Lossy<AttachmentDTO>.
+struct Lossy<T: Decodable>: Decodable {
     let value: T?
     let decodeError: (any Error)?
 

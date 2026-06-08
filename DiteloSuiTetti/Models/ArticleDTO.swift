@@ -41,9 +41,9 @@ struct ArticleDTO: Decodable {
             NSLog("[ArticleDTO] ⚠️ updatedAt missing/invalid for slug '%@'", slug)
         }
 
-        let rawAttachments = (try? c.decode([AttachmentDTO].self, forKey: .attachments))
-            ?? (try? c.decode([AttachmentDTO].self, forKey: .allegati))
+        let lossyAtts = (try? c.decode([Lossy<AttachmentDTO>].self, forKey: .attachments))
+            ?? (try? c.decode([Lossy<AttachmentDTO>].self, forKey: .allegati))
             ?? []
-        attachments = rawAttachments.map { $0.toRelatedDocument() }
+        attachments = lossyAtts.compactMap(\.value).map { $0.toRelatedDocument() }
     }
 }

@@ -28,6 +28,7 @@
 - `APIClient` — `URLSession` + `JSONDecoder.editorial` (`.convertFromSnakeCase` + custom ISO8601 date strategy with `Date.distantPast` fallback)
 - `EditorialCacheRepository` — SwiftData persistence layer; populates stores on cold launch
 - `SyncLogger` — ring-buffer log sink (50 entries); `NSLog` output always on
+- `Lossy<T>` — per-item decode wrapper (in `EditorialSyncResponseDTO.swift`, internal); articles, events, documents all decoded per-item; one bad item never empties the section; first 5 per-item errors logged with index
 
 ### Navigation
 - `ContentView` → `TabView` with four tabs: `.home`, `.articoli`, `.documenti`, `.chiSiamo`
@@ -71,7 +72,7 @@ Applied to: `ArticoliView`, `DocumentiView`, `EventiView`, `AboutView`, `Sosteni
 ### Key components
 - `GCard<Content>` — generic card with tint background, border, shadow
 - `SectionHeader` — `.padding(.horizontal, 20)` (all About content uses `aboutHPad = 20` to match)
-- `RemoteImageView` — `AsyncImage` with branded gradient fallback
+- `RemoteImageView` — persistent image loader: NSCache (memory) → FileManager disk → URLSession; same `url/contentMode/fallbackColors` API; `ImageCache.shared` singleton in `Utilities/ImageCache.swift`
 - `CategoryChip` — pill label for article categories
 - `HomeTopBar` — floats over hero, shows condensed brand on scroll
 - `EmptyStateView` — illustrated empty/error state: icon badge (88pt circle), title, subtitle, up to 2 actions
@@ -182,6 +183,7 @@ Launch with `--screenshots` to enter screenshot mode for App Store Connect captu
 | Screenshot Capture Mode | ✅ `--screenshots` launch argument |
 | Dark Mode navigation title fix | ✅ All cream-background screens use `.brandCream` toolbar background |
 | Attachment support (iOS) | ✅ Full pipeline: DTO → model → cache → UI |
+| Image thumbnails everywhere | ✅ `ImageCache` (NSCache + disk) replaces `AsyncImage`; consistent load in list rows |
 | Attachment backend deployed | ✅ `allegati` migration + `sync-editorial` updated |
 | SwiftData offline cache | ✅ All three content types persisted |
 | Push token registration | ✅ Registered on launch, deduped in UserDefaults |
