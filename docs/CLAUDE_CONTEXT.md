@@ -21,6 +21,7 @@
 - `ArticleStore` — articles list, category filter, sync state
 - `EventStore` — events list, sync state
 - `DocumentStore` — documents list, sync state
+- `AppVersionStore` — in-app update gating from remote config (`AppUpdateRequirement` = `.none`/`.soft`/`.forced`); checked on launch, never blocks on failure
 - All stores injected via `.environment()` from root
 - **Ordering**: `ArticleStore`/`DocumentStore` route every list mutation (`load`/`refresh`/`replace`) through a private `apply(_:)` choke point that sorts via `EditorialSort` — the UI never trusts backend array order. `EventStore` orders via its computed `upcomingEvents`/`pastEvents` (ascending future / descending past).
 
@@ -46,6 +47,17 @@
 - `EditorialCacheRepository` — SwiftData persistence layer; populates stores on cold launch. Holds `schemaVersion` (currently **2**, key `editorialCacheSchemaVersion`): on a version mismatch it purges all cached content **once** so a fresh sync repopulates with the current shape/ordering. Bump it whenever the cached shape or ordering changes.
 - `SyncLogger` — ring-buffer log sink (50 entries); `NSLog` output always on
 - `Lossy<T>` — per-item decode wrapper (in `EditorialSyncResponseDTO.swift`, internal); articles, events, documents all decoded per-item; one bad item never empties the section; first 5 per-item errors logged with index
+
+### In-app update gating (PHASE 8, 2026-06-09)
+- `AppVersionService` fetches `AppEnvironment.appConfigEndpoint` (`…/functions/v1/app-config`) → `AppVersionConfig` (`latest_ios_version`, `minimum_ios_version`, `app_store_url`, `message`; all optional/resilient).
+- `AppVersionStore.check()` runs on launch (skipped in `--screenshots`): reads `CFBundleShortVersionString`, compares via the lenient `SemanticVersion`; `< minimum` → `.forced` (blocking `fullScreenCover`), `< latest` → `.soft` (dismissible `.sheet`, persisted per version). Any failure → `.none` (never blocks).
+- UI: `AppUpdateSheet` presented from `ContentView`. **Backend `app-config` not yet deployed** — see API_CONTRACT "App Version Config".
+
+### Sharing & support (PHASE 9, 2026-06-09)
+- **Canonical share domain** = `AppEnvironment.publicWebsiteURL` (`https://www.suitetti.org`). All shareable links use `articleShareURL/eventShareURL/documentShareURL(slug:)` → `…/{articoli|eventi|documenti}/{slug}`. Never share legacy/preview domains (`comitaticivici.it`, `*.lovable.app`). `AppEnvironment.websiteURL` (`comitaticivici.it`) remains only for the privacy/terms web pages, not sharing.
+- `ShareMessage` builds inviting share text (title + canonical URL + `AppEnvironment.appStoreURL`), used by the three detail-view `ShareLink`s. `[Share] …` logs on share-button appear.
+- **Technical support**: `AboutSupportSection` opens `mailto:` `AppEnvironment.supportEmail` (`info@digitalyogin.com`) with subject `Supporto Ditelo sui Tetti iOS v{version} ({build})`; fallback alert if Mail is unavailable.
+- **Home promo banner**: `HomeReferendumCTA` exists but is **not rendered** in v1.0 (commented out in `HomeView` with a TODO) — reserved as a future banner slot.
 
 ### Navigation
 - `ContentView` → `TabView` with four tabs: `.home`, `.articoli`, `.documenti`, `.chiSiamo`

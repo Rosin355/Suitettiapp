@@ -68,6 +68,40 @@ Response (error):
 - Register (or re-register) the token whenever `FirebaseMessaging.getInstance().token` changes.
 - Skip registration if the current token matches the last successfully registered token (store in SharedPreferences).
 
+### App Version Config (in-app update gating)
+
+```
+GET /functions/v1/app-config
+```
+
+Public, no auth. Drives the native in-app update prompt. **Status: to be deployed** — until it exists the client receives a non-2xx and silently skips the check (the app is never blocked).
+
+Response:
+```json
+{
+  "latest_ios_version": "1.0.4",
+  "minimum_ios_version": "1.0.2",
+  "app_store_url": "https://apps.apple.com/app/idXXXXXXXXX",
+  "message": "È disponibile una nuova versione di Ditelo sui Tetti."
+}
+```
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `latest_ios_version` | string | Newest App Store version. If `current < latest` → **soft** (dismissible) prompt. |
+| `minimum_ios_version` | string | Lowest supported version. If `current < minimum` → **forced** (blocking) prompt. |
+| `app_store_url` | string | Opened by the "Aggiorna ora" button. |
+| `message` | string | Body text shown in the prompt (Italian). |
+
+**Client behaviour** (`AppVersionStore`):
+- Current version read from `CFBundleShortVersionString`; compared with a lenient semantic-version comparator (numeric per component — `1.0.10 > 1.0.9` — tolerant of missing parts and pre-release suffixes).
+- `minimum` check wins over `latest` (forced beats soft).
+- A dismissed soft version is remembered (`UserDefaults: dismissedSoftUpdateVersion`) and not shown again for that same `latest_ios_version`.
+- All fields are optional client-side; a missing field is treated as "no constraint". Any fetch/parse failure is logged and ignored.
+- Decoded via the shared `.convertFromSnakeCase` decoder, so `latest_ios_version` → `latestIosVersion`, etc.
+
+**Android equivalent**: add the same `app-config` call on launch; compare `BuildConfig.VERSION_NAME`; show a `Dialog`/`ModalBottomSheet` (forced = non-cancelable) and open Play Store (`market://details?id=…`) instead of the App Store URL — the backend can return a separate `play_store_url`/`minimum_android_version`/`latest_android_version` set, or a shared payload with platform-specific keys.
+
 ---
 
 ## Editorial Sync Response Shape

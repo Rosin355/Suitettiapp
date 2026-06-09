@@ -61,7 +61,8 @@ private struct CopyLinkButton: View {
 
     var body: some View {
         Button {
-            UIPasteboard.general.string = AppEnvironment.websiteURL.absoluteString
+            // Canonical public domain — never share the legacy comitaticivici.it domain.
+            UIPasteboard.general.string = AppEnvironment.publicWebsiteURL.absoluteString
             withAnimation(.easeInOut(duration: 0.2)) { copied = true }
             Task {
                 try? await Task.sleep(for: .seconds(2))

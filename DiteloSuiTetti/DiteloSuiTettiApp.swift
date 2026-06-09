@@ -18,6 +18,7 @@ struct DiteloSuiTettiApp: App {
     @State private var store         = ArticleStore()
     @State private var eventStore    = EventStore()
     @State private var documentStore = DocumentStore()
+    @State private var appVersionStore = AppVersionStore()
     @State private var cache         = EditorialCacheRepository()
     @State private var router        = AppDeepLinkRouter.shared
     private let coordinator          = EditorialSyncCoordinator()
@@ -37,8 +38,14 @@ struct DiteloSuiTettiApp: App {
                         .environment(store)
                         .environment(eventStore)
                         .environment(documentStore)
+                        .environment(appVersionStore)
                         .environment(router)
                         .task { await loadContent() }
+                        .task {
+                            // Remote-config update check on launch (skipped for App Store
+                            // screenshot automation). Never blocks content if it fails.
+                            if !isScreenshotMode { await appVersionStore.check() }
+                        }
                         .transition(.opacity)
                 } else if showNotificationPrompt {
                     NotificationPermissionView(

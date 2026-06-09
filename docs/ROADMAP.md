@@ -38,6 +38,25 @@ Tasks are tracked here as the single source of truth across AI sessions.
 
 ---
 
+## PHASE 9 — RC resubmission fixes (2026-06-09)
+
+- [x] **Canonical share URLs** — all share buttons (article/event/document) and "Copia link sito" use `https://www.suitetti.org/{articoli|eventi|documenti}/{slug}` via `AppEnvironment` builders + the new `ShareMessage` util. Legacy `comitaticivici.it` removed from every share path. Share text now invites the reader and links the App Store listing. `[Share] … url=` logs added.
+- [x] **Home festival CTA disabled** — `HomeReferendumCTA` render commented out (kept as a future promotional-banner slot); event already shown in "Prossimi eventi"; no layout gap.
+- [x] **Technical support contact** — `AboutSupportSection` ("Supporto tecnico") opens a version/build-stamped `mailto:info@digitalyogin.com`, with a fallback alert if Mail is unavailable.
+
+---
+
+## PHASE 8 — In-app update alert (2026-06-09)
+
+- [x] **Remote-config version gating** — `AppVersionConfig` + `SemanticVersion` (lenient, crash-proof), `AppVersionService` (fetches `…/functions/v1/app-config`), `AppVersionStore` (`@Observable`, launch check), `AppUpdateSheet` (soft/forced UI). Wired into `DiteloSuiTettiApp` launch + `ContentView` presentation.
+- [x] **Soft vs forced** — `current < minimum` → blocking full-screen cover (no dismiss); `current < latest` → dismissible sheet ("Aggiorna ora" / "Più tardi"), dismissal persisted per `latest` version.
+- [x] **Fail-safe** — config fetch error logged and ignored; the app is never blocked. Verified live (endpoint 404 → graceful skip).
+
+**Pending (backend)**:
+- [ ] Deploy the `app-config` Edge Function returning `{ latest_ios_version, minimum_ios_version, app_store_url, message }` (see API_CONTRACT "App Version Config"). Set the real App Store ID in `app_store_url`.
+
+---
+
 ## PHASE 7 — RC polish: PDF cards + editorial fallback (2026-06-09)
 
 - [x] **Premium `LinkedDocumentCard`** — white card, 52pt tinted PDF icon tile, "PDF" pill, 3-line title, optional description, right open icon, soft-red "Apri PDF" action strip (≥46pt), VoiceOver "Apri documento PDF, [title]". Used in Article + Event detail. `NavigationLink → PDFReaderView` unchanged.

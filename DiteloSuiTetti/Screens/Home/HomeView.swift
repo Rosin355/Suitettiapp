@@ -18,8 +18,11 @@ struct HomeView: View {
                     HomeFeaturedArticlesSection(selectedTab: $selectedTab)
                     HomeEventsSection()
                     HomeQuoteSection()
-                    HomeReferendumCTA()
-                        .padding(.bottom, 8)
+                    // TODO: Future promotional banner slot — disabled for v1.0 because the
+                    // event is already surfaced in Prossimi eventi. Re-enable HomeReferendumCTA
+                    // (below) and wire its tap action when a real destination exists.
+                    // HomeReferendumCTA()
+                    //     .padding(.bottom, 8)
                     // Ensures last card scrolls fully above the floating glass tab bar
                     Color.clear.frame(height: 130)
                 }

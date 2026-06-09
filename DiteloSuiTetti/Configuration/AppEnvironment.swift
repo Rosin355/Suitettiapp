@@ -39,6 +39,31 @@ enum AppEnvironment {
 
     static let digitalYoginURL = URL(string: "https://www.digitalyogin.com")!
 
+    // MARK: - Public canonical domain (sharing)
+
+    /// Canonical public website used for all shareable content links.
+    /// This is the user-facing domain — never share legacy/preview domains
+    /// (comitaticivici.it, *.lovable.app, etc.).
+    static let publicWebsiteURL = URL(string: "https://www.suitetti.org")!
+
+    /// Public App Store listing, appended to share messages.
+    static let appStoreURL = URL(string: "https://apps.apple.com/it/app/suitetti/id6772963310")!
+
+    /// Canonical share URLs: https://www.suitetti.org/{articoli|eventi|documenti}/{slug}
+    static func articleShareURL(slug: String) -> URL {
+        publicWebsiteURL.appendingPathComponent("articoli").appendingPathComponent(slug)
+    }
+    static func eventShareURL(slug: String) -> URL {
+        publicWebsiteURL.appendingPathComponent("eventi").appendingPathComponent(slug)
+    }
+    static func documentShareURL(slug: String) -> URL {
+        publicWebsiteURL.appendingPathComponent("documenti").appendingPathComponent(slug)
+    }
+
+    // MARK: - Support
+
+    static let supportEmail = "info@digitalyogin.com"
+
     // MARK: - Endpoints
 
     static var syncEditorialEndpoint: URL {
@@ -47,6 +72,12 @@ enum AppEnvironment {
 
     static var registerPushTokenEndpoint: URL {
         apiBaseURL.appendingPathComponent("functions/v1/register-push-token")
+    }
+
+    /// Remote app-version config (latest/minimum iOS version, App Store URL, message).
+    /// Backend endpoint to be deployed; see docs/API_CONTRACT.md "App Version Config".
+    static var appConfigEndpoint: URL {
+        apiBaseURL.appendingPathComponent("functions/v1/app-config")
     }
 
     static func syncEditorialDeltaEndpoint(since date: Date) -> URL {

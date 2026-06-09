@@ -19,6 +19,7 @@ struct AboutView: View {
                     onShowSocial:   { showSocial = true },
                     onShowRateApp:  { showRateApp = true }
                 )
+                AboutSupportSection()
                 AboutDeveloperSection()
             }
             // Constrain card content to readable width on iPad
@@ -267,6 +268,114 @@ private struct SettingsRow: View {
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Technical support
+
+private struct AboutSupportSection: View {
+    @State private var showMailError = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SectionHeader(title: "Supporto tecnico")
+
+            GCard {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .top, spacing: 12) {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.brandRed.opacity(0.08))
+                            .frame(width: 44, height: 44)
+                            .overlay {
+                                Image(systemName: "wrench.and.screwdriver.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.brandRed)
+                            }
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Hai bisogno di aiuto?")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.brandBlack)
+                                .kerning(-0.3)
+                            Text("Per problemi tecnici o segnalazioni sull'app, contatta il team di sviluppo.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.brandGray)
+                                .lineSpacing(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
+
+                    Divider().padding(.horizontal, 16)
+
+                    Button { contactSupport() } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.brandRed)
+                            Text("Scrivi a Digital Yogin")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.brandRed)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.brandRed.opacity(0.7))
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Contatta il supporto tecnico Digital Yogin")
+                }
+            }
+            .padding(.horizontal, aboutHPad)
+            .padding(.bottom, 14)
+        }
+        .alert("Mail non disponibile", isPresented: $showMailError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Non è possibile aprire Mail. Puoi scrivere a \(AppEnvironment.supportEmail)")
+        }
+    }
+
+    private func contactSupport() {
+        guard let url = supportMailURL() else {
+            showMailError = true
+            return
+        }
+        NSLog("[Support] opening mail composer to %@", AppEnvironment.supportEmail)
+        UIApplication.shared.open(url, options: [:]) { success in
+            if !success {
+                NSLog("[Support] ✗ Mail unavailable — showing fallback alert")
+                showMailError = true
+            }
+        }
+    }
+
+    /// Builds a `mailto:` URL with a version/build-stamped subject and a body
+    /// template, percent-encoding both with a strict unreserved-only set.
+    private func supportMailURL() -> URL? {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let build   = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+        let subject = "Supporto Ditelo sui Tetti iOS v\(version) (\(build))"
+        let body = """
+        Ciao Digital Yogin,
+
+        ho bisogno di supporto per l'app Ditelo sui Tetti.
+
+        Descrizione del problema:
+
+        """
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        let s = subject.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        let b = body.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        return URL(string: "mailto:\(AppEnvironment.supportEmail)?subject=\(s)&body=\(b)")
     }
 }
 

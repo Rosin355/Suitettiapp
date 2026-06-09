@@ -4,6 +4,58 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-06-09 — RC fixes: canonical share URLs, Home banner off, technical support contact
+
+Three pre-resubmission fixes. No backend changes; PDF/article/event navigation untouched.
+
+### TASK 1 — Share URLs use the canonical public domain
+- **`AppEnvironment`**: added `publicWebsiteURL = https://www.suitetti.org`, `appStoreURL` (`…/it/app/suitetti/id6772963310`), `supportEmail`, and `articleShareURL/eventShareURL/documentShareURL(slug:)` builders.
+- **`ShareMessage`** (new util): inviting share text (not a raw URL) embedding the canonical link + App Store line.
+- `ArticleDetailView` / `EventDetailView` / `DocumentDetailView` share buttons now share `https://www.suitetti.org/{articoli|eventi|documenti}/{slug}` via `ShareMessage`. Article previously shared the **legacy `comitaticivici.it`** domain — fixed. Event previously shared `event.link`; document previously shared the raw PDF URL. "Leggi PDF" / "Apri esternamente" still use the real PDF URL (navigation unbroken).
+- Also fixed `SupportActionsSection`'s "Copia link sito" which copied `comitaticivici.it` → now `publicWebsiteURL`.
+- Logs: `[Share] article|event|document url=…` (on share-button appear). Verified the exact URL/text/encoding with a standalone check.
+
+### TASK 2 — Home festival CTA disabled
+- The black "Scopri l'evento del 16 giugno" card (`HomeReferendumCTA`) navigated nowhere and duplicated "Prossimi eventi". Its render in `HomeView` is commented out with a TODO ("Future promotional banner slot — disabled for v1.0 …"); the component is kept for future banners. No empty spacing left.
+
+### TASK 3 — Technical support contact in About
+- New `AboutSupportSection` (before the developer section): card with wrench icon, "Hai bisogno di aiuto?", subtitle, and "Scrivi a Digital Yogin".
+- Opens a `mailto:` to **info@digitalyogin.com** via `UIApplication.open` (completion-based — shows a friendly alert if Mail is unavailable). Subject `Supporto Ditelo sui Tetti iOS v{version} ({build})`; pre-filled Italian body. Subject/body percent-encoded with a strict unreserved-only set. VoiceOver: "Contatta il supporto tecnico Digital Yogin".
+
+### Build
+`** BUILD SUCCEEDED **` (iPhone 17 Pro simulator); launch sanity check passed (no crash).
+
+---
+
+## 2026-06-09 — In-app update alert (remote-config version gating)
+
+**Goal**: Show a native SwiftUI update prompt when a newer App Store version exists, driven by backend remote config (not hardcoded). Must never block the app if the config request fails.
+
+### New files
+- **`Models/AppVersionConfig.swift`** — `Decodable` config (`latest_ios_version`, `minimum_ios_version`, `app_store_url`, `message`), all fields optional/resilient. Plus `SemanticVersion`: a lenient, crash-proof comparator (numeric per-component, tolerates missing parts, pre-release/build suffixes, and non-numeric noise → `0`).
+- **`Services/AppVersionService.swift`** — `AppVersionServiceProtocol` + `LiveAppVersionService` (fetches `AppEnvironment.appConfigEndpoint` via the shared `APIClient`) + `StubAppVersionService` for previews/tests.
+- **`Stores/AppVersionStore.swift`** — `@MainActor @Observable`. Reads `CFBundleShortVersionString`; on `check()`:
+  - `current < minimum_ios_version` → `.forced` (blocking).
+  - `current < latest_ios_version` → `.soft` (dismissible), unless that exact `latest` was already dismissed.
+  - Any fetch error → logged and **ignored** (`requirement = .none`); the app is never blocked.
+  - `dismissSoftUpdate()` persists the dismissed `latest` in `UserDefaults` (`dismissedSoftUpdateVersion`) so the soft prompt won't reappear for the same release. `openAppStore()` opens `app_store_url`.
+- **`Components/AppUpdateSheet.swift`** — branded prompt. Soft = "Aggiorna ora" + "Più tardi"; forced = "Aggiorna ora" only, `interactiveDismissDisabled`.
+
+### Wiring
+- `AppEnvironment.appConfigEndpoint` = `…/functions/v1/app-config` (backend to deploy).
+- `DiteloSuiTettiApp`: `AppVersionStore` created, injected via `.environment`, checked on launch in a dedicated `.task` (skipped in `--screenshots` mode).
+- `ContentView`: soft prompt via `.sheet` (`.medium` detent; swipe-dismiss records the version), forced via `.fullScreenCover` with `interactiveDismissDisabled(true)`.
+
+### Verification
+- `** BUILD SUCCEEDED **` (iPhone 17 Pro simulator).
+- Launch check verified live: `[AppVersionStore] checking — current version 1.0` → `app-config` returns `404` (not yet deployed) → `✗ config fetch failed — ignoring, app not blocked: badStatus(404)`. App loaded normally — graceful-failure path confirmed.
+- `SemanticVersion` validated with a standalone harness (9/9), incl. `1.0.10 > 1.0.9` (numeric, not lexicographic), pre-release equality, and garbage/empty input.
+
+### Backend TODO
+Deploy the `app-config` Edge Function returning the documented JSON (see API_CONTRACT "App Version Config"). Until then the check no-ops gracefully.
+
+---
+
 ## 2026-06-09 — RC polish: premium PDF cards + official editorial fallback image
 
 **Goal**: Two RC UI/content improvements (no redesign, no backend changes, don't break PDF opening) plus a full Android/Jetpack Compose conversion doc set.

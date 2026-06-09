@@ -501,3 +501,11 @@ Detail screens (article/event/document) are content-only because the entity is a
 **Design tokens**: cornerRadius 22, smallCorner 14, padding 16, sectionSpacing 12, readableMaxWidth 820, topBarContentOffset 62. Colors: brandCream `#F5EFE6`, brandRed `~#C0141E`, brandBlack, brandGray/brandGrayLight (metadata), brandSep (separators). Glass surfaces = translucent white at ~0.82 opacity + ultraThin/thin material + subtle shadows + rounded floating controls.
 
 **Accessibility**: combine/ignore row children into single VoiceOver elements; min 44×44 pt (48 dp Android) tap targets; Dynamic Type; Reduce Motion guards on the appear/zoom animations; brandGray metadata for sufficient contrast.
+
+---
+
+## Addendum — flow changes (2026-06-09)
+
+- **Home**: the black festival CTA (`HomeReferendumCTA`, "Scopri l'evento del 16 giugno") is **disabled in v1.0** — it navigated nowhere and duplicated "Prossimi eventi". The component remains as a future promotional-banner slot but is not rendered. "Prossimi eventi" is unchanged.
+- **Share** (article/event/document detail): the share button now produces an inviting message containing the **canonical** `https://www.suitetti.org/{articoli|eventi|documenti}/{slug}` URL + the store listing — not a bare/legacy URL. PDF "Leggi PDF" / "Apri esternamente" still use the real PDF URL.
+- **About → "Supporto tecnico"** (new card, before the developer section): taps open a `mailto:` to **info@digitalyogin.com** with a version/build-stamped subject; a fallback alert appears if no mail client is available.

@@ -553,3 +553,34 @@ Components to port (reusable, 1:1 with iOS): `CategoryChip`, `ArticleListRow`, `
 - Store pattern: `DiteloSuiTetti/Stores/{Article,Event,Document}Store.swift`
 
 Companion docs in `docs/`: `API_CONTRACT.md`, `ANDROID_HANDOFF.md`, `ANDROID_IMPLEMENTATION_PLAN.md`.
+
+---
+
+## Addendum — Sharing & support (2026-06-09)
+
+**Canonical share domain: `https://www.suitetti.org`.** Share the same canonical URLs on Android — never legacy/preview domains (`comitaticivici.it`, `*.lovable.app`):
+- Article → `https://www.suitetti.org/articoli/{slug}`
+- Event   → `https://www.suitetti.org/eventi/{slug-or-id}`
+- Document→ `https://www.suitetti.org/documenti/{slug}`
+
+**Share content is an invitation, not a bare URL** — build a message with the title + canonical URL + the store link:
+
+```kotlin
+fun articleShareText(title: String, slug: String) = """
+    Ti invito a leggere questo articolo su Ditelo sui Tetti:
+
+    $title
+
+    Aprilo sul sito o scarica l'app per seguire articoli, eventi e documenti:
+    https://www.suitetti.org/articoli/$slug
+
+    App Android:
+    https://play.google.com/store/apps/details?id=<your.package>
+""".trimIndent()
+// share via Intent.ACTION_SEND (text/plain) wrapped in Intent.createChooser
+```
+(iOS appends the App Store listing `https://apps.apple.com/it/app/suitetti/id6772963310`; swap the Play Store URL on Android.)
+
+**Home promo banner**: the festival CTA is disabled in v1.0 (event already in "Prossimi eventi"). Keep a banner slot for the future but don't render it.
+
+**Technical support**: the About screen has a "Supporto tecnico" card → email **info@digitalyogin.com**, subject `Supporto Ditelo sui Tetti iOS v{version} ({build})` (Android: `… Android v{versionName} ({versionCode})`) + pre-filled Italian body. Use `ACTION_SENDTO` `mailto:`; if nothing resolves, show a dialog with the address. Percent-encode subject/body.

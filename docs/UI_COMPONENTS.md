@@ -375,3 +375,15 @@ fun CategoryChip(text: String, tint: Color = Brand.Red) {
 ## 9. Definition of Done (per component)
 
 A Compose component reaches parity when: it matches the token values above; supports light + (where relevant) the cream-on-white surface model; exposes the same TalkBack label/role; has ≥ 48.dp touch targets; scales text via `sp`/`FontScale`; honors Reduce Motion; and renders correct **loading / empty / error** states on its hosting screen. No hardcoded secrets, no business logic in the composable.
+
+---
+
+## Addendum — new/changed components (2026-06-09)
+
+| Component | iOS | Compose equivalent |
+|---|---|---|
+| **Support card** (About → "Supporto tecnico") | `AboutSupportSection`: GCard with wrench icon, "Hai bisogno di aiuto?", subtitle, "Scrivi a Digital Yogin" row → `mailto:`; alert fallback | Card + `ListItem`/row; `ACTION_SENDTO` `mailto:info@digitalyogin.com`; subject `Supporto Ditelo sui Tetti … v{version} ({build})`; `AlertDialog` if no mail app. Content desc: "Contatta il supporto tecnico Digital Yogin". |
+| **Share button** | `ShareLink` over `ShareMessage` text (title + canonical `suitetti.org` URL + store link) | `Intent.ACTION_SEND` (text/plain) in `Intent.createChooser`; build the same invite text; use the Play Store URL. |
+| **Promo banner** (`HomeReferendumCTA`) | dark gradient CTA card — **not rendered in v1.0** (kept for future) | optional future banner slot; do not render for v1.0. |
+
+**Share text rule**: never share a raw or legacy URL — always the inviting message with the canonical `https://www.suitetti.org/…` link and the store listing.

@@ -16,14 +16,17 @@ struct EventDetailView: View {
         HTMLTextFormatter.plainText(from: event.description)
     }
 
+    /// Canonical public share URL: https://www.suitetti.org/eventi/{slug-or-id}
+    private var shareURL: URL {
+        let slug = event.slug.isEmpty ? event.id.uuidString : event.slug
+        return AppEnvironment.eventShareURL(slug: slug)
+    }
+
     private var shareText: String {
-        var lines = ["📅 \(event.title)"]
-        var when = event.fullDate
+        var when = "Quando: \(event.fullDate)"
         if !event.time.isEmpty { when += " · ore \(event.time)" }
-        lines.append("Quando: \(when)")
-        if !event.location.isEmpty { lines.append("Dove: \(event.location)") }
-        if let link = event.link   { lines.append("Scopri di più: \(link.absoluteString)") }
-        return lines.joined(separator: "\n")
+        let whereLine = event.location.isEmpty ? nil : "Dove: \(event.location)"
+        return ShareMessage.event(title: event.title, url: shareURL, whenLine: when, whereLine: whereLine)
     }
 
     private var heroColors: [Color] {
@@ -278,6 +281,7 @@ struct EventDetailView: View {
                 )
         }
         .accessibilityLabel("Condividi evento")
+        .onAppear { NSLog("[Share] event url=%@", shareURL.absoluteString) }
     }
 
     // MARK: - Calendar

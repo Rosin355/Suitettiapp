@@ -7,6 +7,12 @@ struct DocumentDetailView: View {
         HTMLTextFormatter.plainText(from: document.description)
     }
 
+    /// Canonical public share URL: https://www.suitetti.org/documenti/{slug}
+    /// (The PDF itself is still opened/downloaded from `document.url`.)
+    private var shareURL: URL {
+        AppEnvironment.documentShareURL(slug: document.slug)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -133,7 +139,7 @@ struct DocumentDetailView: View {
                     .controlSize(.large)
                     .accessibilityLabel("Apri PDF nel browser")
 
-                    ShareLink(item: pdfURL) {
+                    ShareLink(item: ShareMessage.document(title: document.title, url: shareURL)) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 16, weight: .medium))
                             .frame(width: 44, height: 44)
@@ -141,6 +147,7 @@ struct DocumentDetailView: View {
                     .buttonStyle(.bordered)
                     .tint(.brandGray)
                     .accessibilityLabel("Condividi documento")
+                    .onAppear { NSLog("[Share] document url=%@", shareURL.absoluteString) }
                 }
             }
         } else {

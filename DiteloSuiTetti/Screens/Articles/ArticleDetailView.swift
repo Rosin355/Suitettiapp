@@ -204,22 +204,24 @@ struct ArticleDetailView: View {
         .accessibilityLabel("Torna indietro")
     }
 
-    @ViewBuilder
+    private var shareURL: URL {
+        AppEnvironment.articleShareURL(slug: article.slug)
+    }
+
     private var shareButton: some View {
-        if let shareURL = URL(string: AppEnvironment.websiteURL.absoluteString + "/articoli/" + article.slug) {
-            ShareLink(item: shareURL) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Circle()
-                            .fill(.black.opacity(0.35))
-                            .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 2)
-                    )
-            }
-            .accessibilityLabel("Condividi articolo")
+        ShareLink(item: ShareMessage.article(title: article.title, url: shareURL)) {
+            Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(
+                    Circle()
+                        .fill(.black.opacity(0.35))
+                        .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 2)
+                )
         }
+        .accessibilityLabel("Condividi articolo")
+        .onAppear { NSLog("[Share] article url=%@", shareURL.absoluteString) }
     }
 }
 

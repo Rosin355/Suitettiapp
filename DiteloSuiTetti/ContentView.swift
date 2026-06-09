@@ -12,6 +12,7 @@ struct ContentView: View {
     @Environment(ArticleStore.self)      private var articleStore
     @Environment(EventStore.self)        private var eventStore
     @Environment(DocumentStore.self)     private var documentStore
+    @Environment(AppVersionStore.self)   private var appVersionStore
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -79,6 +80,48 @@ struct ContentView: View {
                 resolveDeepLink(link)
             }
         }
+        // Soft update — dismissible sheet ("Aggiorna ora" / "Più tardi")
+        .sheet(isPresented: softUpdateBinding) {
+            if case let .soft(config) = appVersionStore.requirement {
+                AppUpdateSheet(
+                    config: config,
+                    isForced: false,
+                    onUpdate: { appVersionStore.openAppStore() },
+                    onLater: { appVersionStore.dismissSoftUpdate() }
+                )
+                .presentationDetents([.medium])
+            }
+        }
+        // Forced update — blocking full-screen cover, cannot be dismissed
+        .fullScreenCover(isPresented: forcedUpdateBinding) {
+            if case let .forced(config) = appVersionStore.requirement {
+                AppUpdateSheet(
+                    config: config,
+                    isForced: true,
+                    onUpdate: { appVersionStore.openAppStore() }
+                )
+                .interactiveDismissDisabled(true)
+            }
+        }
+    }
+
+    // MARK: - Update prompt bindings
+
+    /// Presents the soft sheet; dismissing it (swipe or "Più tardi") records the
+    /// dismissed version so it won't reappear for the same release.
+    private var softUpdateBinding: Binding<Bool> {
+        Binding(
+            get: { if case .soft = appVersionStore.requirement { return true } else { return false } },
+            set: { isShown in if !isShown { appVersionStore.dismissSoftUpdate() } }
+        )
+    }
+
+    /// Presents the forced cover; the setter is a no-op so it cannot be dismissed.
+    private var forcedUpdateBinding: Binding<Bool> {
+        Binding(
+            get: { appVersionStore.requirement.isForced },
+            set: { _ in }
+        )
     }
 
     // MARK: - Deep link resolution
@@ -113,5 +156,6 @@ struct ContentView: View {
         .environment(ArticleStore(service: StubEditorialService()))
         .environment(EventStore(service: StubEventService()))
         .environment(DocumentStore(service: StubDocumentService()))
+        .environment(AppVersionStore(service: StubAppVersionService()))
         .environment(AppDeepLinkRouter.shared)
 }
