@@ -29,6 +29,11 @@
 - `Article.publishedAt` ← `ArticleDTO.dataPubblicazione`; `Document.publishedAt` ← `DocumentDTO.dataCaricamento` (strict, so the sort key matches the displayed "Caricato il" date). Both persisted in `CachedArticle`/`CachedDocument`.
 - Sorting is applied in `EditorialSyncCoordinator` (payload, so `NewContentDetector` sees newest-first), `EditorialCacheRepository.loadPayload`, and both stores' `apply(_:)`.
 
+### Documents / PDF pipeline (see PHASE 6 audit, 2026-06-09)
+- `DocumentDTO` resolves the PDF URL across all known field variants (`url`, `file_url`, `pdf_url`, `document_url`, `attachment_url`, `public_url`, `legacy_url`, `link`) and **prefers a direct `.pdf` URL over a page URL**. The current backend sends only `url`.
+- `PDFReaderView` → `PDFDownloadService` downloads, validates mime/extension, caches in `tmp`. Diagnostics: `[DocumentURL] title=… url=…` before open; `[DocumentPDF] status=… mime=…` per response.
+- **Data caveat**: working documents resolve to Supabase storage (`…supabase.co/storage/v1/object/public/document-files/…`). Documents still pointing at legacy `www.suitetti.org/wp-content/…` URLs are dead (404) or HTML pages and must be re-hosted on the backend — the app cannot fix a missing remote file. Article/Event attachments (`AttachmentDTO` → `RelatedDocument`) already resolve to Supabase and work.
+
 ### Sync layer
 - `EditorialSyncCoordinator` — orchestrates full + delta sync
 - `APIClient` — `URLSession` + `JSONDecoder.editorial` (`.convertFromSnakeCase` + custom ISO8601 date strategy with `Date.distantPast` fallback)

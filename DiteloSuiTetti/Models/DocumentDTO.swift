@@ -23,8 +23,8 @@ struct DocumentDTO: Decodable {
         // description
         case descrizione, description
         // url: multiple backend field name variants (snake_case mapped by decoder:
-        // file_url, document_url, public_url)
-        case url, fileUrl, documentUrl, link, publicUrl
+        // file_url, pdf_url, document_url, attachment_url, public_url, legacy_url)
+        case url, fileUrl, pdfUrl, documentUrl, attachmentUrl, publicUrl, legacyUrl, link
         // dates
         case dataCaricamento, createdAt, updatedAt
         // version
@@ -58,12 +58,31 @@ struct DocumentDTO: Decodable {
             ?? (try? c.decode(String.self, forKey: .description)).nonEmpty
             ?? ""
 
-        // URL: try all known field names the backend might use
-        url = (try? c.decode(String.self, forKey: .url)).nonEmpty
-            ?? (try? c.decode(String.self, forKey: .fileUrl)).nonEmpty
-            ?? (try? c.decode(String.self, forKey: .documentUrl)).nonEmpty
-            ?? (try? c.decode(String.self, forKey: .publicUrl)).nonEmpty
-            ?? (try? c.decode(String.self, forKey: .link)).nonEmpty
+        // URL: collect every known backend field, then PREFER a direct-PDF URL over
+        // an HTML page URL (e.g. a legacy WordPress permalink). If the backend ever
+        // sends both a public page URL and a PDF URL, the PDF wins.
+        let urlCandidates: [String] = [
+            (try? c.decode(String.self, forKey: .url)).nonEmpty,
+            (try? c.decode(String.self, forKey: .fileUrl)).nonEmpty,
+            (try? c.decode(String.self, forKey: .pdfUrl)).nonEmpty,
+            (try? c.decode(String.self, forKey: .documentUrl)).nonEmpty,
+            (try? c.decode(String.self, forKey: .attachmentUrl)).nonEmpty,
+            (try? c.decode(String.self, forKey: .publicUrl)).nonEmpty,
+            (try? c.decode(String.self, forKey: .legacyUrl)).nonEmpty,
+            (try? c.decode(String.self, forKey: .link)).nonEmpty,
+        ].compactMap { $0 }
+
+        func isPDFLike(_ string: String) -> Bool {
+            (URL(string: string)?.pathExtension.lowercased() ?? "") == "pdf"
+        }
+        url = urlCandidates.first(where: isPDFLike) ?? urlCandidates.first
+
+        // Diagnostic: surface exactly the documents whose only URL is NOT a direct PDF
+        // (a page link or a non-.pdf object) — these are the ones that 404 or render HTML.
+        if let chosen = url, !isPDFLike(chosen) {
+            NSLog("[DocumentURL] ⚠️ '%@' resolved to a non-PDF URL: %@ (%d candidate field(s))",
+                  titolo, chosen, urlCandidates.count)
+        }
 
         // Version — default 0 if missing
         syncVersion = (try? c.decode(Int.self, forKey: .syncVersion)) ?? 0

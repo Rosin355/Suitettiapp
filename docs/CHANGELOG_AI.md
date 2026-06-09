@@ -4,6 +4,60 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-06-09 — PHASE 6: Document URL audit (Documenti tab PDF 404s)
+
+**Goal**: Article/Event PDF attachments and PDFKit all work, but the Documenti tab failed on some documents with HTTP 404 (e.g. "PDL Partecipazione Proposte Bilancio 2025" failed; "Festival 3°" worked). Audit the full Documents pipeline and find why.
+
+### Findings (live `sync-editorial`, 25 documents)
+
+Audited every document URL with the app's User-Agent (1-byte range request):
+
+| Host | Count | HTTP | Result |
+|---|---|---|---|
+| `…supabase.co/storage/v1/object/public/document-files/…` | **18** | `206` `application/pdf` | ✅ all work |
+| `www.suitetti.org/wp-content/uploads/…pdf` | **6** | `404` `text/plain` ("Not found") | ❌ dead file |
+| `www.suitetti.org/2023/10/30/legge-cappato/` | **1** | `200` `text/html` | ❌ HTML page, not a PDF |
+
+The 404s were re-tested with a desktop **browser User-Agent** and still returned `404 "Not found"` → **not** a UA/bot block; the files genuinely no longer exist on the WordPress host.
+
+The backend exposes **only a single `url` field** per document (no `file_url`/`pdf_url`/`attachment_url`), so there was no alternate field the app could have fallen back to.
+
+### Root cause
+
+**Backend data quality, not the iOS pipeline.** 18 documents were migrated to Supabase storage and resolve correctly. 7 documents still carry **legacy `www.suitetti.org` URLs**:
+- 6 point to `wp-content/uploads/*.pdf` files that were deleted when the site was rebuilt → permanent `404`.
+- 1 points to a WordPress **article permalink** (not a file) → the server returns the site HTML, which PDFKit cannot render.
+
+The working "Festival" document and all Article/Event attachments resolve to Supabase storage, which is exactly why those paths never failed.
+
+### Fix applied (iOS — diagnostics + resilience)
+
+- **`PDFReaderView`** — logs `[DocumentURL] title=… url=…` before every download.
+- **`PDFDownloadService`** — logs `[DocumentPDF] status=… mime=… url=…` for every response; an HTML/non-PDF body now logs `✗ not a PDF — server returned mime=…` and throws `invalidContent` (no blank viewer). 404s already surface as "Errore del server (codice 404)".
+- **`DocumentDTO`** — URL resolution now collects all known field variants (`url`, `file_url`, `pdf_url`, `document_url`, `attachment_url`, `public_url`, `legacy_url`, `link`) and **prefers a direct-`.pdf` URL over a page URL** — so if the backend ever provides both a page URL and a PDF URL, the PDF wins. A document whose only URL is non-PDF logs `[DocumentURL] ⚠️ '…' resolved to a non-PDF URL: …` at decode (verified live: flagged "Incostituzionalità del fine vita").
+
+`** BUILD SUCCEEDED **` (iPhone 17 Pro simulator). Diagnostics verified live against the endpoint.
+
+### Recommended backend fix (the real remediation — not iOS)
+
+For each of the 7 failing documents (slugs below), upload the source PDF to the `document-files` Supabase bucket (path pattern `documents/legacy/<slug>/<file>.pdf`, as the 18 working docs use) and update the row's `url` to the new public storage URL. For `incostituzionalita-del-fine-vita`, either store the real PDF URL or reclassify it as a web-link document.
+
+Failing slugs: `amicus-curiae-scienza-vita`, `opinione-ex-art-6-nig-esserci-oss-bioetica-siena`, `incostituzionalita-del-fine-vita` (HTML), `legge-bilancio-2024-proposte-network-sui-tetti`, `pdl-partecipazione-proposte-bilancio-2025`, `legge-bilancio-2025-proposte-network-sui-tetti`, `lettera-ministro-schillaci-vita-fine-vita`.
+
+### Per-document report
+
+| Title | Current URL | HTTP | Root cause | Recommended fix |
+|---|---|---|---|---|
+| Amicus Curiae Scienza & Vita | `…/wp-content/uploads/2024/04/OPINIONE-SCRITTA-EX-ART.-6.pdf` | 404 | Legacy WP file deleted | Re-upload to Supabase; update `url` |
+| Opinione ex art. 6 NIG – Esserci | `…/wp-content/uploads/2024/04/Opinione-ex-art.-6-NIG_signed.pdf` | 404 | Legacy WP file deleted | Re-upload to Supabase; update `url` |
+| Incostituzionalità del fine vita | `…/2023/10/30/legge-cappato/` | 200 (HTML) | URL is a WP article page, not a PDF | Store real PDF URL or mark as web link |
+| Legge di Bilancio 2024 | `…/wp-content/uploads/2023/09/LEGGE-DI-BILANCIO-10-CANONI-SUI-TETTI-web.pdf` | 404 | Legacy WP file deleted | Re-upload to Supabase; update `url` |
+| PDL Partecipazione Proposte Bilancio 2025 | `…/wp-content/uploads/2025/01/PDL-PARTECIPAZIONE-PROPOSTE-BILANCIO-2025-SUI-TETTI.pdf` | 404 | Legacy WP file deleted | Re-upload to Supabase; update `url` |
+| Legge di Bilancio 2025 | `…/wp-content/uploads/2024/10/legge-di-bilancio-2025-sui-tetti.pdf` | 404 | Legacy WP file deleted | Re-upload to Supabase; update `url` |
+| Lettera del Ministro Schillaci | `…/wp-content/uploads/2022/11/SALUTO-MINISTRO-FINE-VITA_ok.pdf` | 404 | Legacy WP file deleted | Re-upload to Supabase; update `url` |
+
+---
+
 ## 2026-06-09 — Sort latest editorial content & restore documents visibility (RC)
 
 **Goal**: Sync succeeded (273 articles, 62 events, 25 documents) but the UI did not surface the latest content: Home/Articoli showed stale ordering, Documenti did not show the newest PDFs, and one event failed to decode because `ora` was `null`. Fix sorting, cache refresh and document visibility — without redesigning the UI.

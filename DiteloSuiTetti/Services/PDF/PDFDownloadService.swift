@@ -44,19 +44,27 @@ actor PDFDownloadService {
     private static func download(_ remoteURL: URL) async throws -> URL {
         let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
 
-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+        let http = response as? HTTPURLResponse
+        let status = http?.statusCode ?? -1
+        let mime = http?.mimeType ?? "nil"
+        // Diagnostics: a glance at the console pins down whether a failing document
+        // is a missing object (404), an HTML page served instead of a PDF, etc.
+        NSLog("[DocumentPDF] status=%d mime=%@ url=%@", status, mime, remoteURL.absoluteString)
+
+        if let http, !(200..<300).contains(http.statusCode) {
             try? FileManager.default.removeItem(at: tempURL)
             throw PDFDownloadError.httpError(http.statusCode)
         }
 
         let isPDF: Bool
-        if let http = response as? HTTPURLResponse, let mime = http.mimeType {
-            isPDF = mime.contains("pdf") || remoteURL.pathExtension.lowercased() == "pdf"
+        if let mimeType = http?.mimeType {
+            isPDF = mimeType.contains("pdf") || remoteURL.pathExtension.lowercased() == "pdf"
         } else {
             isPDF = remoteURL.pathExtension.lowercased() == "pdf"
         }
 
         guard isPDF else {
+            NSLog("[DocumentPDF] ✗ not a PDF — server returned mime=%@ for %@", mime, remoteURL.absoluteString)
             try? FileManager.default.removeItem(at: tempURL)
             throw PDFDownloadError.invalidContent
         }

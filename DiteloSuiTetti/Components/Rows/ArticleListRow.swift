@@ -48,5 +48,10 @@ struct ArticleListRow: View {
                 Divider().padding(.leading, 88)
             }
         }
+        .onAppear {
+            NSLog("[ArticleListRow] '%@' imageURL=%@",
+                  article.title,
+                  article.imageURL?.absoluteString ?? "nil")
+        }
     }
 }

@@ -68,6 +68,7 @@ struct PDFReaderView: View {
     }
 
     private func loadPDF() async {
+        NSLog("[DocumentURL] title=%@ url=%@", title, remoteURL.absoluteString)
         isLoading = true
         errorMessage = nil
         pdfDocument = nil

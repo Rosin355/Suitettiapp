@@ -38,6 +38,25 @@ Tasks are tracked here as the single source of truth across AI sessions.
 
 ---
 
+## PHASE 6 — Document URL Audit (2026-06-09)
+
+**Trigger**: Documenti tab failed with HTTP 404 on some PDFs while Article/Event attachments and PDFKit worked fine.
+
+**Findings**: Of 25 documents, 18 use Supabase storage URLs (all `206 application/pdf` — work); 7 use legacy `www.suitetti.org` URLs — 6 dead `wp-content/*.pdf` (`404`, confirmed not a UA block) and 1 WordPress article permalink that serves HTML, not a PDF.
+
+**Root cause**: Backend data — 7 documents were never migrated to Supabase storage and still carry dead/HTML legacy URLs. The payload exposes only one `url` field per document, so the app had no alternate field to fall back to. This is **not** an iOS/PDFKit bug.
+
+**Fix applied (iOS)**:
+- [x] `[DocumentURL]` (title + url) log before every PDF open
+- [x] `[DocumentPDF]` (status + mime) log on every download; HTML/non-PDF bodies throw `invalidContent` instead of a blank viewer
+- [x] `DocumentDTO` resolves across all URL field variants and **prefers a direct `.pdf` URL over a page URL**; non-PDF resolution logs `[DocumentURL] ⚠️` at decode
+
+**Pending (backend remediation)**:
+- [ ] **Re-host 6 dead-PDF documents** to the `document-files` Supabase bucket and update each `url` (slugs: `amicus-curiae-scienza-vita`, `opinione-ex-art-6-nig-esserci-oss-bioetica-siena`, `legge-bilancio-2024-proposte-network-sui-tetti`, `pdl-partecipazione-proposte-bilancio-2025`, `legge-bilancio-2025-proposte-network-sui-tetti`, `lettera-ministro-schillaci-vita-fine-vita`)
+- [ ] **Fix `incostituzionalita-del-fine-vita`** — store the real PDF URL or reclassify as a web-link document
+
+---
+
 ## In Progress / Verification needed
 
 - [ ] **Verify `APNS_ENV = production` in Supabase secrets** — TestFlight / App Store require production APNs endpoint (`api.push.apple.com`); backend must not use sandbox endpoint for distribution builds
