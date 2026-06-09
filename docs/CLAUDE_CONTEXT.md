@@ -22,11 +22,17 @@
 - `EventStore` — events list, sync state
 - `DocumentStore` — documents list, sync state
 - All stores injected via `.environment()` from root
+- **Ordering**: `ArticleStore`/`DocumentStore` route every list mutation (`load`/`refresh`/`replace`) through a private `apply(_:)` choke point that sorts via `EditorialSort` — the UI never trusts backend array order. `EventStore` orders via its computed `upcomingEvents`/`pastEvents` (ascending future / descending past).
+
+### Content ordering (`EditorialSort`)
+- `Utilities/EditorialSort.swift` — single source of truth. Stable descending sort by an optional `Date` key; `nil` dates sort **last** (tie-break on original index → valid strict-weak-ordering).
+- `Article.publishedAt` ← `ArticleDTO.dataPubblicazione`; `Document.publishedAt` ← `DocumentDTO.dataCaricamento` (strict, so the sort key matches the displayed "Caricato il" date). Both persisted in `CachedArticle`/`CachedDocument`.
+- Sorting is applied in `EditorialSyncCoordinator` (payload, so `NewContentDetector` sees newest-first), `EditorialCacheRepository.loadPayload`, and both stores' `apply(_:)`.
 
 ### Sync layer
 - `EditorialSyncCoordinator` — orchestrates full + delta sync
 - `APIClient` — `URLSession` + `JSONDecoder.editorial` (`.convertFromSnakeCase` + custom ISO8601 date strategy with `Date.distantPast` fallback)
-- `EditorialCacheRepository` — SwiftData persistence layer; populates stores on cold launch
+- `EditorialCacheRepository` — SwiftData persistence layer; populates stores on cold launch. Holds `schemaVersion` (currently **2**, key `editorialCacheSchemaVersion`): on a version mismatch it purges all cached content **once** so a fresh sync repopulates with the current shape/ordering. Bump it whenever the cached shape or ordering changes.
 - `SyncLogger` — ring-buffer log sink (50 entries); `NSLog` output always on
 - `Lossy<T>` — per-item decode wrapper (in `EditorialSyncResponseDTO.swift`, internal); articles, events, documents all decoded per-item; one bad item never empties the section; first 5 per-item errors logged with index
 

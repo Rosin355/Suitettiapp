@@ -22,8 +22,9 @@ struct DocumentDTO: Decodable {
         case categoria, category
         // description
         case descrizione, description
-        // url: multiple backend field name variants
-        case url, fileUrl, documentUrl, link
+        // url: multiple backend field name variants (snake_case mapped by decoder:
+        // file_url, document_url, public_url)
+        case url, fileUrl, documentUrl, link, publicUrl
         // dates
         case dataCaricamento, createdAt, updatedAt
         // version
@@ -61,6 +62,7 @@ struct DocumentDTO: Decodable {
         url = (try? c.decode(String.self, forKey: .url)).nonEmpty
             ?? (try? c.decode(String.self, forKey: .fileUrl)).nonEmpty
             ?? (try? c.decode(String.self, forKey: .documentUrl)).nonEmpty
+            ?? (try? c.decode(String.self, forKey: .publicUrl)).nonEmpty
             ?? (try? c.decode(String.self, forKey: .link)).nonEmpty
 
         // Version — default 0 if missing

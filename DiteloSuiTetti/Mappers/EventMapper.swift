@@ -2,15 +2,16 @@ import Foundation
 
 extension EventDTO {
     func toEvent() -> Event {
+        let oraValue = ora?.trimmingCharacters(in: .whitespaces) ?? ""
         let day      = EventDateParser.dayString(from: dataEvento)
         let month    = EventDateParser.monthShort(from: dataEvento)
         let full     = EventDateParser.fullDate(from: dataEvento)
-        let dispTime = ora.trimmingCharacters(in: .whitespaces).isEmpty
-                         ? "" : EventDateParser.displayTime(ora)
-        let rawDate  = EventDateParser.combinedDate(dateString: dataEvento, timeString: ora)
+        let dispTime = oraValue.isEmpty ? "" : EventDateParser.displayTime(oraValue)
+        let rawDate  = EventDateParser.combinedDate(dateString: dataEvento, timeString: oraValue)
 
         if rawDate == nil {
-            NSLog("[EventMapper] ⚠️ date parse failed — title: %@, dataEvento: %@, ora: %@", titolo, dataEvento, ora)
+            NSLog("[EventMapper] ⚠️ date parse failed — title: %@, dataEvento: %@, ora: %@",
+                  titolo, dataEvento, oraValue.isEmpty ? "(nil)" : oraValue)
         }
 
         return Event(

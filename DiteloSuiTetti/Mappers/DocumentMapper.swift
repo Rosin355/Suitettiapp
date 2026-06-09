@@ -19,6 +19,11 @@ extension DocumentDTO {
             description: descrizione,
             url:         url.flatMap { URL(string: $0) },
             uploadedAt:  uploaded,
+            // Sort key must match the displayed "Caricato il" date (derived from
+            // dataCaricamento only). Using updatedAt as a fallback would hoist a
+            // re-edited old PDF and let a doc shown as "Data non disponibile" sort
+            // above dated ones — so a document with no upload date sorts last.
+            publishedAt: dataCaricamento,
             updatedAt:   updatedAt,
             syncVersion: syncVersion
         )

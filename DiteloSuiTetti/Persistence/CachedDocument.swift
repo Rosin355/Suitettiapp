@@ -11,6 +11,7 @@ final class CachedDocument {
     var documentDescription: String
     var urlString: String?
     var uploadedAt: String
+    var publishedAt: Date?
     var updatedAt: Date?
     var syncVersion: Int
 
@@ -23,6 +24,7 @@ final class CachedDocument {
         documentDescription = document.description
         urlString           = document.url?.absoluteString
         uploadedAt          = document.uploadedAt
+        publishedAt         = document.publishedAt
         updatedAt           = document.updatedAt
         syncVersion         = document.syncVersion
     }
@@ -37,6 +39,7 @@ final class CachedDocument {
             description: documentDescription,
             url:         urlString.flatMap { URL(string: $0) },
             uploadedAt:  uploadedAt,
+            publishedAt: publishedAt,
             updatedAt:   updatedAt,
             syncVersion: syncVersion
         )

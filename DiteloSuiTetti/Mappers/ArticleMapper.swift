@@ -37,6 +37,7 @@ extension ArticleDTO {
             title:            sentenceCase(titolo),
             date:             dateShort,
             fullDate:         dateFull,
+            publishedAt:      dataPubblicazione,
             readTime:         "\(readMinutes) min",
             excerpt:          estratto,
             body:             contenuto,

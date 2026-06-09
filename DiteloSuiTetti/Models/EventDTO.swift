@@ -6,7 +6,7 @@ struct EventDTO: Decodable {
     let slug: String
     let tipo: String
     let dataEvento: String   // "YYYY-MM-DD" date-only — parse when building Event UI model
-    let ora: String
+    let ora: String?         // backend may send null — optional so it never drops the event
     let luogo: String
     let descrizione: String
     let link: String?
@@ -24,17 +24,26 @@ struct EventDTO: Decodable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+
+        // Only id and titolo are hard-required: a malformed event must never drop
+        // from the list unless its identity is missing. Every other field tolerates
+        // null/missing/wrong-type by falling back to a safe default — mirroring the
+        // resilient DocumentDTO pattern. The mapper already renders an event with an
+        // empty dataEvento as "undated" rather than discarding it.
         id          = try c.decode(UUID.self,   forKey: .id)
         titolo      = try c.decode(String.self, forKey: .titolo)
-        slug        = try c.decode(String.self, forKey: .slug)
-        tipo        = try c.decode(String.self, forKey: .tipo)
-        dataEvento  = try c.decode(String.self, forKey: .dataEvento)
-        ora         = try c.decode(String.self, forKey: .ora)
-        luogo       = try c.decode(String.self, forKey: .luogo)
-        descrizione = try c.decode(String.self, forKey: .descrizione)
-        link        = try c.decodeIfPresent(String.self, forKey: .link)
-        immagineUrl = try c.decodeIfPresent(String.self, forKey: .immagineUrl)
-        syncVersion = try c.decode(Int.self,    forKey: .syncVersion)
+        slug        = (try? c.decode(String.self, forKey: .slug)) ?? id.uuidString
+        tipo        = (try? c.decodeIfPresent(String.self, forKey: .tipo)) ?? ""
+        dataEvento  = (try? c.decodeIfPresent(String.self, forKey: .dataEvento)) ?? ""
+        // `ora` is frequently null in the backend; decodeIfPresent yields nil for
+        // both missing keys and explicit JSON null, so a null time never throws.
+        // `try?` flattens the result to String?, also tolerating a wrong type.
+        ora         = try? c.decodeIfPresent(String.self, forKey: .ora)
+        luogo       = (try? c.decodeIfPresent(String.self, forKey: .luogo)) ?? ""
+        descrizione = (try? c.decodeIfPresent(String.self, forKey: .descrizione)) ?? ""
+        link        = try? c.decodeIfPresent(String.self, forKey: .link)
+        immagineUrl = try? c.decodeIfPresent(String.self, forKey: .immagineUrl)
+        syncVersion = (try? c.decodeIfPresent(Int.self, forKey: .syncVersion)) ?? 0
 
         updatedAt = try? c.decode(Date.self, forKey: .updatedAt)
         if updatedAt == nil {

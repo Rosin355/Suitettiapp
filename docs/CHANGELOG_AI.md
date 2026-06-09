@@ -4,6 +4,61 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-06-09 — Sort latest editorial content & restore documents visibility (RC)
+
+**Goal**: Sync succeeded (273 articles, 62 events, 25 documents) but the UI did not surface the latest content: Home/Articoli showed stale ordering, Documenti did not show the newest PDFs, and one event failed to decode because `ora` was `null`. Fix sorting, cache refresh and document visibility — without redesigning the UI.
+
+### Root cause
+
+Content was rendered in **raw backend array order** — nothing sorted by date. Two model-level data losses made date-sorting impossible:
+
+- **`Article`** kept only formatted date *strings* (`date`, `fullDate`); `ArticleMapper` discarded `ArticleDTO.dataPubblicazione`. Home "In evidenza" (`store.articles.prefix(6)`) and Articoli's featured hero (`filtered.first`) therefore trusted whatever order the backend returned.
+- **`Document`** kept only the `uploadedAt` *string* (+ `updatedAt`); `DocumentMapper` discarded `DocumentDTO.dataCaricamento`. `DocumentiView` iterated `store.documents` in raw order.
+
+Compounding issues:
+- **Event drop**: `EventDTO.ora` was a non-optional `try c.decode(String.self,…)` — a `null` `ora` threw `valueNotFound` and the per-item `Lossy<EventDTO>` wrapper silently dropped that event. The same applied to `tipo`/`luogo`/`descrizione`/`syncVersion` (any `null` would drop an otherwise-valid event).
+- **Stale cache**: the SwiftData cache held old, date-less, unsorted rows; without a schema bump + one-time clear, restored content stayed stale.
+
+### Fix
+
+**New `Utilities/EditorialSort.swift`** — single source of truth for ordering. Stable descending sort by an optional `Date` key; `nil` dates sort *last* (tie-break on original index → valid strict-weak-ordering, no sort crash).
+
+**Articles (TASK 1)**
+- `Article` + `CachedArticle` gained `publishedAt: Date?`; `ArticleMapper` maps it from `dataPubblicazione`; cache persists/restores it.
+- `ArticleStore` now routes `load`/`refresh`/`replace` through a private `apply(_:)` choke point that sorts via `EditorialSort` and logs `[ArticleStore] sorted latest article: …`.
+
+**Documents (TASK 2)**
+- `Document` + `CachedDocument` gained `publishedAt: Date?` (mapped strictly from `dataCaricamento`, so the sort key matches the displayed "Caricato il" date and truly undated PDFs sink to the bottom).
+- `DocumentStore` sorts via the same `apply(_:)` choke point; logs `[DocumentStore] sorted latest document: …`.
+- `DocumentDTO` URL decode now also tries `public_url` (`publicUrl` via `.convertFromSnakeCase`), in addition to `url`/`file_url`/`document_url`/`link`. Documents without a URL stay disabled ("PDF non disponibile"); valid URLs remain tappable. `DocumentiView` already uses the live/cache `DocumentStore` (PreviewData only feeds `#Preview`).
+
+**Events (TASK 3)**
+- `EventDTO.ora` is now `String?` via `decodeIfPresent`. Extended the resilience to `slug`/`tipo`/`dataEvento`/`luogo`/`descrizione`/`syncVersion` (safe defaults) so **only `id`/`titolo` can ever drop an event** — matching the requirement. `EventMapper` handles the optional `ora`.
+
+**Cache (TASK 4)**
+- `EditorialCacheRepository` gained `schemaVersion = 2` (key `editorialCacheSchemaVersion`). On launch, a version mismatch purges all cached articles/events/documents **once**, logs `[EditorialCache] schema bump — clearing stale editorial cache`, then a fresh sync repopulates with dated, sorted content. The version is advanced **only after a confirmed purge** (do/catch), so a transient failure retries next launch.
+
+**Diagnostics (TASK 5)**
+- `EditorialSyncCoordinator` sorts the payload at the source (so `NewContentDetector`, which picks the first new item, sees newest-first) and logs the first 5 of each type in final order: `[SyncDiag] article[i] / document[i] (url nil/present) / event[i] (rawDate, upcoming)`.
+
+### Files changed
+
+`Utilities/EditorialSort.swift` (new), `Models/Article.swift`, `Models/Document.swift`, `Models/DocumentDTO.swift`, `Models/EventDTO.swift`, `Mappers/ArticleMapper.swift`, `Mappers/DocumentMapper.swift`, `Mappers/EventMapper.swift`, `Persistence/CachedArticle.swift`, `Persistence/CachedDocument.swift`, `Persistence/EditorialCacheRepository.swift`, `Stores/ArticleStore.swift`, `Stores/DocumentStore.swift`, `Services/Sync/EditorialSyncCoordinator.swift`.
+
+### Verification
+
+- Implementation was reviewed by an adversarial multi-agent pass (sort correctness, SwiftData migration safety, decode resilience, compile-safety). Three confirmed findings were fixed before commit: incomplete event-decode resilience (HIGH), document sort-key vs. displayed-date divergence (MEDIUM), and cache version advancing on a failed purge (LOW).
+- `** BUILD SUCCEEDED **` (Debug, iPhone 17 Pro simulator) — no new errors; only pre-existing preview/main-actor warnings.
+- Adding an optional SwiftData attribute is a lightweight, automatically-migratable change; the one-time schema purge is belt-and-suspenders for stale ordering.
+
+### What to look for after deploying
+
+Filter Console.app by `[SyncDiag]`, `[ArticleStore]`, `[DocumentStore]`, `[EditorialCache]`:
+- `[SyncDiag] article[0]` should be the newest publication; `[SyncDiag] document[0]` the newest PDF.
+- `[EditorialCache] schema bump — clearing stale editorial cache` appears once after updating.
+
+---
+
 ## 2026-06-08 — Resilient article/event decoding after backend attachments update
 
 **Goal**: Restore articles and events after the backend `attachments[]` addition caused the entire sections to decode as empty (0 articles, 0 events, 25 documents).

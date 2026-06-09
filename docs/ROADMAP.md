@@ -28,6 +28,9 @@ Tasks are tracked here as the single source of truth across AI sessions.
 - [x] **Persistent image cache** — `ImageCache` (NSCache 100 items/50MB + FileManager disk) replaces `AsyncImage` in `RemoteImageView`; load order: memory → disk → network; `[ImageCache]` + `[ArticleListRow]` NSLog diagnostics; consistent thumbnail loading at any frame size
 - [x] **Dark Mode navigation title fix** — all cream-background screens use `.toolbarBackground(.brandCream)` + `.toolbarColorScheme(.light)` so large titles render dark in both modes (`ArticoliView`, `DocumentiView`, `EventiView`, `AboutView`, `SosteniView`)
 - [x] **Article/Event PDF attachment support (iOS)** — full pipeline: `AttachmentDTO` → `RelatedDocument` → `CachedArticle/CachedEvent` (SwiftData JSON column) → `LinkedDocumentCard` in detail views
+- [x] **Latest-content ordering (RC, 2026-06-09)** — `EditorialSort` single source of truth; `Article`/`Document` carry `publishedAt`; `ArticleStore`/`DocumentStore` sort newest-first on every path (live, cache restore, pull-to-refresh); undated items sort last; cache schema bumped to v2 with one-time stale purge; `[SyncDiag]` first-5 diagnostics. Verified live: articles & documents descending; null-`ora` event recovered (62 → 63)
+- [x] **Event decode hardening (RC, 2026-06-09)** — `EventDTO`: only `id`/`titolo` are hard-required; `ora`/`tipo`/`luogo`/`descrizione`/`dataEvento`/`slug`/`syncVersion` tolerate null/missing so a malformed event never drops
+- [x] **Document URL resilience (RC, 2026-06-09)** — `DocumentDTO` URL decode tries `url`/`file_url`/`document_url`/`public_url`/`link`; docs without a URL render disabled, valid PDFs stay tappable
 - [x] **Backend: allegati migration deployed** — `public.allegati` table with polymorphic `parent_type + parent_id`, soft delete, `is_mobile_visible`, delta-sync trigger
 - [x] **Backend: sync-editorial attachments deployed** — `attachments: []` on every article and event; never null
 - [x] **Backend: send-apns-push deployed** — production APNs push with `content_type`, `content_id`, `url`
@@ -40,6 +43,7 @@ Tasks are tracked here as the single source of truth across AI sessions.
 - [ ] **Verify `APNS_ENV = production` in Supabase secrets** — TestFlight / App Store require production APNs endpoint (`api.push.apple.com`); backend must not use sandbox endpoint for distribution builds
 - [ ] **Attachment E2E test** — insert a row in `public.allegati`, open app, sync, confirm `LinkedDocumentCard` appears in article/event detail view
 - [ ] **TestFlight Release Candidate QA** — full regression: all tabs, dark mode, offline mode, push notification flow
+- [ ] **Latest-content ordering — real-device QA (2026-06-09 fix)** — delete app → fresh install → Home shows latest article → Articoli first item is latest publication → Documenti shows latest PDFs → open a PDF → pull-to-refresh keeps order → relaunch keeps order. (Sort/decoding verified on the iPhone 17 Pro simulator against the live endpoint; on-device pass still pending.)
 
 ---
 

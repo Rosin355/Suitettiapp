@@ -9,6 +9,8 @@ struct Article: Identifiable {
     let title: String
     let date: String
     let fullDate: String
+    /// Raw publication date used for ordering. Display uses `date`/`fullDate`.
+    let publishedAt: Date?
     let readTime: String
     let excerpt: String
     let body: String
@@ -24,6 +26,7 @@ struct Article: Identifiable {
         title: String,
         date: String,
         fullDate: String,
+        publishedAt: Date? = nil,
         readTime: String,
         excerpt: String = "",
         body: String = "",
@@ -38,6 +41,7 @@ struct Article: Identifiable {
         self.title = title
         self.date = date
         self.fullDate = fullDate
+        self.publishedAt = publishedAt
         self.readTime = readTime
         self.excerpt = excerpt
         self.body = body

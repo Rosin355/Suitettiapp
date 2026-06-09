@@ -35,7 +35,7 @@ final class ArticleStore {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            articles = try await service.fetchAll()
+            apply(try await service.fetchAll())
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -47,7 +47,7 @@ final class ArticleStore {
         errorMessage = nil
         defer { isRefreshing = false }
         do {
-            articles = try await service.fetchAll()
+            apply(try await service.fetchAll())
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -62,10 +62,20 @@ final class ArticleStore {
     }
 
     func replace(with articles: [Article]) {
-        self.articles = articles
+        apply(articles)
         isLoading = false
         isRefreshing = false
         offlineMessage = nil
+    }
+
+    /// Single choke point: every path that sets `articles` (live sync, cache
+    /// restore, service fetch, pull-to-refresh) routes through here so the list
+    /// is always newest-first and never trusts backend array order.
+    private func apply(_ incoming: [Article]) {
+        articles = EditorialSort.articlesByDateDescending(incoming)
+        if let latest = articles.first {
+            NSLog("[ArticleStore] sorted latest article: '%@' (%@)", latest.title, latest.fullDate)
+        }
     }
 
     func failedLoading(message: String) {

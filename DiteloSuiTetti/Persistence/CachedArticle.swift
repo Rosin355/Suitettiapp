@@ -9,6 +9,7 @@ final class CachedArticle {
     var title: String
     var date: String
     var fullDate: String
+    var publishedAt: Date?
     var readTime: String
     var excerpt: String
     var body: String
@@ -22,6 +23,7 @@ final class CachedArticle {
         title          = article.title
         date           = article.date
         fullDate       = article.fullDate
+        publishedAt    = article.publishedAt
         readTime       = article.readTime
         excerpt        = article.excerpt
         body           = article.body
@@ -45,6 +47,7 @@ final class CachedArticle {
             title:            title,
             date:             date,
             fullDate:         fullDate,
+            publishedAt:      publishedAt,
             readTime:         readTime,
             excerpt:          excerpt,
             body:             body,
