@@ -45,8 +45,14 @@ struct EventDetailView: View {
         ScrollView {
             VStack(spacing: 0) {
                 heroSection
-                titleCardSection
-                contentSection
+                // Constrain title + content (incl. PDF cards) to a readable max-width so
+                // they do not span the full detail width on iPad. Mirrors ArticleDetailView.
+                VStack(spacing: 0) {
+                    titleCardSection
+                    contentSection
+                }
+                .frame(maxWidth: DT.readableMaxWidth)
+                .frame(maxWidth: .infinity)
             }
             .containerRelativeFrame(.horizontal)
         }
@@ -90,7 +96,8 @@ struct EventDetailView: View {
         DetailHeroImage(
             imageURL: event.imageURL,
             fallbackColors: heroColors,
-            height: 340
+            height: 340,
+            logTitle: event.title
         )
     }
 

@@ -4,6 +4,47 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-06-09 — RC polish: premium PDF cards + official editorial fallback image
+
+**Goal**: Two RC UI/content improvements (no redesign, no backend changes, don't break PDF opening) plus a full Android/Jetpack Compose conversion doc set.
+
+### TASK 1 — Premium `LinkedDocumentCard`
+
+Redesigned the linked-PDF card used in Article detail ("Documenti allegati") and Event detail ("Documenti dell'evento"):
+- Large rounded **white** card with a 52pt tinted icon tile (`doc.richtext.fill` in red).
+- Clear **"PDF" pill**, title up to 3 lines, optional description row (date/file-size are **not** in the payload, so they are omitted rather than faked).
+- Right-side open/download icon (`arrow.down.circle.fill`).
+- Soft-red **"Apri PDF" action strip** (≥ 46pt) at the bottom.
+- VoiceOver collapses to a single button labelled **"Apri documento PDF, [title]"**.
+- Existing `NavigationLink → PDFReaderView` behaviour unchanged; nil-URL shows a disabled "PDF non disponibile" strip.
+
+### TASK 2 — Official brand-logo fallback for imageless editorial content
+
+123 of 273 articles have `immagine_url: null` and previously showed a coloured gradient.
+- Added reusable asset **`Assets.xcassets/dst_fallback_logo`** (the official cream "DITELO SUI TETTI" brand mark).
+- `RemoteImageView` now shows the brand logo (`scaledToFit` on a cream backing, seamless at any aspect ratio) when `url == nil` **or** the download fails — never a gradient for editorial content. `ImageCache` is still used for valid remote URLs.
+- Applied everywhere via the shared view: Home featured list, Articoli list, Articoli featured card, Article detail header, Event detail header.
+- Logs: `[RemoteImageView] using fallback image — url nil (title: …)` and `[ImageCache] failed — fallback shown (…)`. Verified live (e.g. "Un punto per la vita", "…la dignità non si misura in utilità").
+
+### TASK 3 — iPad / Dynamic Type / VoiceOver
+
+- `EventDetailView` content (incl. PDF cards) is now constrained to `DT.readableMaxWidth` and centred on iPad, mirroring `ArticleDetailView` (previously it spanned the full width).
+- Card title uses `fixedSize(vertical:)` + `lineLimit(3)` → no clipping under large Dynamic Type; full-card tap target; VoiceOver label verified.
+
+### TASK 4 — Android conversion docs
+
+New: `docs/ANDROID_CONVERSION_GUIDE.md`, `docs/APP_FLOW.md`, `docs/DATA_MODELS.md`, `docs/UI_COMPONENTS.md`. Updated: `API_CONTRACT.md`, `CLAUDE_CONTEXT.md`, `ROADMAP.md`, `CHANGELOG_AI.md`, `README.md`.
+
+### Build
+
+`** BUILD SUCCEEDED **` (iPhone 17 Pro simulator). Fallback verified on-device-sim with a screenshot (brand logo renders in place of gradients).
+
+### Files changed
+
+`Components/Common/RemoteImageView.swift`, `Components/Documents/LinkedDocumentCard.swift`, `Components/Detail/DetailHeroImage.swift`, `Components/Rows/ArticleListRow.swift`, `Components/Cards/FeaturedArticleCard.swift`, `Screens/Home/HomeFeaturedArticlesSection.swift`, `Screens/Articles/ArticlesListSection.swift`, `Screens/Articles/ArticleDetailView.swift`, `Screens/Events/EventDetailView.swift`, `Assets.xcassets/dst_fallback_logo.imageset/*`, plus docs.
+
+---
+
 ## 2026-06-09 — PHASE 6: Document URL audit (Documenti tab PDF 404s)
 
 **Goal**: Article/Event PDF attachments and PDFKit all work, but the Documenti tab failed on some documents with HTTP 404 (e.g. "PDL Partecipazione Proposte Bilancio 2025" failed; "Festival 3°" worked). Audit the full Documents pipeline and find why.

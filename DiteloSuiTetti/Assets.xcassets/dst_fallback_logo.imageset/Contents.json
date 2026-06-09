@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "dst_fallback_logo.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

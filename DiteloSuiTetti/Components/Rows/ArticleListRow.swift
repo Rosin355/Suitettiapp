@@ -7,7 +7,7 @@ struct ArticleListRow: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 14) {
-                RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
+                RemoteImageView(url: article.imageURL, logTitle: article.title, fallbackColors: article.thumbnailColors)
                     .frame(width: 58, height: 58)
                     .clipShape(.rect(cornerRadius: 14))
                     .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)

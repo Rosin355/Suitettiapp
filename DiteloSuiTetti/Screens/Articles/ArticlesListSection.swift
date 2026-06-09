@@ -143,7 +143,7 @@ private struct ArticlesFeaturedCard: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             // Article image — falls back to branded gradient if nil or load fails
-            RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
+            RemoteImageView(url: article.imageURL, logTitle: article.title, fallbackColors: article.thumbnailColors)
                 .frame(height: 230)
                 .frame(maxWidth: .infinity)
                 .clipped()

@@ -54,7 +54,7 @@ struct HomeFeaturedArticlesSection: View {
 
     @ViewBuilder private func iPadArticleCard(_ article: Article) -> some View {
         HStack(spacing: 12) {
-            RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
+            RemoteImageView(url: article.imageURL, logTitle: article.title, fallbackColors: article.thumbnailColors)
                 .frame(width: 72, height: 72)
                 .clipShape(.rect(cornerRadius: 14))
                 .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)

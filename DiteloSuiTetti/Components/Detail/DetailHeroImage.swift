@@ -5,10 +5,11 @@ struct DetailHeroImage: View {
     let fallbackColors: [Color]
     var height: CGFloat = 340
     var accessibilityLabel: String? = nil
+    var logTitle: String? = nil
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            RemoteImageView(url: imageURL, fallbackColors: fallbackColors)
+            RemoteImageView(url: imageURL, logTitle: logTitle ?? accessibilityLabel, fallbackColors: fallbackColors)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             LinearGradient(

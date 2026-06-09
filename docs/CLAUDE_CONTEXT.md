@@ -33,6 +33,12 @@
 - `DocumentDTO` resolves the PDF URL across all known field variants (`url`, `file_url`, `pdf_url`, `document_url`, `attachment_url`, `public_url`, `legacy_url`, `link`) and **prefers a direct `.pdf` URL over a page URL**. The current backend sends only `url`.
 - `PDFReaderView` → `PDFDownloadService` downloads, validates mime/extension, caches in `tmp`. Diagnostics: `[DocumentURL] title=… url=…` before open; `[DocumentPDF] status=… mime=…` per response.
 - **Data caveat**: working documents resolve to Supabase storage (`…supabase.co/storage/v1/object/public/document-files/…`). Documents still pointing at legacy `www.suitetti.org/wp-content/…` URLs are dead (404) or HTML pages and must be re-hosted on the backend — the app cannot fix a missing remote file. Article/Event attachments (`AttachmentDTO` → `RelatedDocument`) already resolve to Supabase and work.
+- `LinkedDocumentCard` (Article/Event detail) is the premium PDF card: tinted icon tile + "PDF" pill + title + soft-red "Apri PDF" action strip; collapses to one VoiceOver button "Apri documento PDF, [title]".
+
+### Editorial image fallback (PHASE 7, 2026-06-09)
+- `RemoteImageView` loads via `ImageCache` and falls back to the **official brand logo** asset `dst_fallback_logo` when `url == nil` or the download fails — never a gradient for editorial content. `scaledToFit` on a cream backing reads as an intentional placeholder at any aspect ratio (1:1 in list thumbnails).
+- The legacy `fallbackColors` parameter is retained only for source compatibility; it is no longer rendered.
+- Diagnostics: `[RemoteImageView] using fallback image — url nil (title: …)`, `[ImageCache] failed — fallback shown (…)`.
 
 ### Sync layer
 - `EditorialSyncCoordinator` — orchestrates full + delta sync

@@ -38,6 +38,21 @@ Tasks are tracked here as the single source of truth across AI sessions.
 
 ---
 
+## PHASE 7 — RC polish: PDF cards + editorial fallback (2026-06-09)
+
+- [x] **Premium `LinkedDocumentCard`** — white card, 52pt tinted PDF icon tile, "PDF" pill, 3-line title, optional description, right open icon, soft-red "Apri PDF" action strip (≥46pt), VoiceOver "Apri documento PDF, [title]". Used in Article + Event detail. `NavigationLink → PDFReaderView` unchanged.
+- [x] **Official editorial fallback image** — `dst_fallback_logo` brand asset shown by `RemoteImageView` when `imageURL == nil` or load fails (Home/Articoli lists, featured cards, Article/Event detail headers). No more gradient placeholders for editorial content; `ImageCache` retained for valid URLs; fallback diagnostics added.
+- [x] **iPad readable-width parity** — `EventDetailView` content constrained to `DT.readableMaxWidth` (matches `ArticleDetailView`); no card clipping under Dynamic Type.
+- [x] **Android conversion docs** — `ANDROID_CONVERSION_GUIDE.md`, `APP_FLOW.md`, `DATA_MODELS.md`, `UI_COMPONENTS.md` (new) + updated context/contract/readme.
+
+**Pending (carry-over)**:
+- [ ] Backend `mobile_documents_public` / `file_url` fix verification (re-host the 7 legacy/dead document URLs — see PHASE 6)
+- [ ] APNs production killed-app push QA
+- [ ] App Store screenshot final pass
+- [ ] Android Kotlin / Jetpack Compose conversion (the build itself)
+
+---
+
 ## PHASE 6 — Document URL Audit (2026-06-09)
 
 **Trigger**: Documenti tab failed with HTTP 404 on some PDFs while Article/Event attachments and PDFKit worked fine.

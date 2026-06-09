@@ -7,7 +7,7 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 ## Current Version
 
 **v1.0 Release Candidate** — App Store pre-submission  
-*Last updated: 6 June 2026*
+*Last updated: 9 June 2026*
 
 ### Release Candidate Status
 
@@ -15,11 +15,14 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 - ✅ iPad adaptive layout + accessibility pass
 - ✅ SwiftData offline cache + resilient decoding
 - ✅ Article/Event PDF attachments — backend (`allegati` migration + `sync-editorial`) deployed; iOS fully wired
+- ✅ Latest-content sorting (newest-first, undated last) + event null-`ora` decode fix
+- ✅ Document URL audit (PHASE 6) — 18/25 work; 7 legacy URLs flagged for backend re-host
+- ✅ Premium PDF cards + official editorial fallback image (`dst_fallback_logo`) for imageless articles
 - ✅ APNs push notifications — token registration + backend send deployed
 - ✅ Dark Mode navigation title fix — all cream-background screens use solid brand background
 - ✅ Screenshot Capture Mode (`--screenshots` launch argument)
 - ✅ Privacy Manifest (`PrivacyInfo.xcprivacy`) created
-- ⚠️ Remaining: App Store screenshots, metadata, `APNS_ENV` production verification, final TestFlight QA
+- ⚠️ Remaining: backend re-host of 7 dead document URLs, App Store screenshots, metadata, `APNS_ENV` production verification, final TestFlight QA
 
 See [docs/APP_STORE_CHECKLIST.md](docs/APP_STORE_CHECKLIST.md) for the full pre-submission checklist.
 
@@ -31,16 +34,21 @@ Documentation for rebuilding this app in Kotlin / Jetpack Compose:
 
 | Document | Purpose |
 |----------|---------|
-| [docs/ANDROID_HANDOFF.md](docs/ANDROID_HANDOFF.md) | App architecture, screen flows, iOS→Android technology mapping |
+| [docs/ANDROID_CONVERSION_GUIDE.md](docs/ANDROID_CONVERSION_GUIDE.md) | **Start here** — primary SwiftUI→Kotlin/Compose conversion guide with concrete mappings |
+| [docs/APP_FLOW.md](docs/APP_FLOW.md) | Every screen + navigation flow (Compose NavHost sketch) |
+| [docs/DATA_MODELS.md](docs/DATA_MODELS.md) | Field-by-field model reference + ready-to-paste `@Serializable` data classes + Room entities |
+| [docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md) | Design tokens + reusable component catalog with Compose equivalents |
 | [docs/API_CONTRACT.md](docs/API_CONTRACT.md) | Supabase API endpoints, field definitions, decoding resilience rules |
-| [docs/ANDROID_IMPLEMENTATION_PLAN.md](docs/ANDROID_IMPLEMENTATION_PLAN.md) | Phase-by-phase Kotlin build plan (Phases 1–11) |
+| [docs/ANDROID_HANDOFF.md](docs/ANDROID_HANDOFF.md) | (Earlier) architecture + iOS→Android technology mapping |
+| [docs/ANDROID_IMPLEMENTATION_PLAN.md](docs/ANDROID_IMPLEMENTATION_PLAN.md) | (Earlier) phase-by-phase Kotlin build plan |
 
 Key notes for the Android developer:
-- Documents must be decoded **per-item** (one bad record must not zero the whole array)
-- Documents with a missing PDF URL **must still appear** in the list ("PDF non disponibile")
+- Use **Kotlin + Jetpack Compose**, **Room + DataStore** (offline cache), **Retrofit/Ktor + kotlinx.serialization**, **Coil** (images)
+- Decode **per-item** (one bad record must not zero the whole array); for events only `id`/`titolo` are hard-required; `ora` is nullable
+- Documents with a missing PDF URL **must still appear** ("PDF non disponibile"); prefer a direct `.pdf` URL over a page URL; 7 backend URLs are currently dead (see API_CONTRACT PHASE 6 caveat)
+- Missing article/event images use the **official brand-logo fallback** (`dst_fallback_logo`), never a gradient — implement with a Coil fallback painter
 - All events may be past — Home shows only upcoming events; empty state is valid
 - The Documenti tab is a first-class tab with its own fetching and PDF viewer
-- The Chi siamo tab contains: support CTA, Privacy Policy, Terms, notification settings, rate-app, version/build, and Digital Yogin srl attribution
 
 ---
 

@@ -23,11 +23,17 @@ struct RelatedDocument: Identifiable, Codable {
 
 // MARK: - Card view
 
-/// Compact card for a linked document.
+/// Premium card for a linked PDF document.
 /// When `url` is provided, tapping navigates to `PDFReaderView` (requires a NavigationStack ancestor).
 /// When `url` is nil, the card shows a disabled "PDF non disponibile" state.
 struct LinkedDocumentCard: View {
     let document: RelatedDocument
+
+    /// "PDF" pill text — defaults to PDF, but surfaces a distinct backend type if present.
+    private var pillText: String {
+        let trimmed = document.type.trimmingCharacters(in: .whitespaces)
+        return (trimmed.isEmpty || trimmed.lowercased() == "pdf") ? "PDF" : trimmed.uppercased()
+    }
 
     var body: some View {
         if let url = document.url {
@@ -35,63 +41,111 @@ struct LinkedDocumentCard: View {
                 cardBody(hasURL: true)
             }
             .buttonStyle(PressableCardStyle())
-            .accessibilityLabel("Documento: \(document.title). Tocca per leggere il PDF.")
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Apri documento PDF, \(document.title)")
             .accessibilityHint("Apre il lettore PDF")
+            .accessibilityAddTraits(.isButton)
         } else {
             cardBody(hasURL: false)
-                .accessibilityLabel("Documento: \(document.title). PDF non disponibile.")
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Documento PDF non disponibile, \(document.title)")
         }
     }
 
     private func cardBody(hasURL: Bool) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: hasURL ? "doc.richtext.fill" : "doc.slash")
-                .font(.system(size: 22))
-                .foregroundStyle(hasURL ? Color.brandRed : Color.brandGrayLight)
-                .frame(width: 40, height: 40)
+        VStack(spacing: 0) {
+            // MARK: Main content row
+            HStack(alignment: .top, spacing: 14) {
+                // Stronger PDF icon in a tinted rounded tile
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(hasURL ? Color.brandRed.opacity(0.12) : Color.black.opacity(0.06))
+                    Image(systemName: hasURL ? "doc.richtext.fill" : "doc.slash.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(hasURL ? Color.brandRed : Color.brandGrayLight)
+                }
+                .frame(width: 52, height: 52)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                if !document.type.isEmpty {
-                    CategoryChip(
-                        text: document.type,
-                        color: hasURL ? .brandRed : .brandGrayLight,
-                        background: hasURL ? .brandRed.opacity(0.10) : Color.black.opacity(0.06)
-                    )
+                VStack(alignment: .leading, spacing: 6) {
+                    // Clear "PDF" pill
+                    Text(pillText)
+                        .font(.system(size: 11, weight: .bold))
+                        .kerning(0.5)
+                        .foregroundStyle(hasURL ? Color.brandRed : Color.brandGrayLight)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            (hasURL ? Color.brandRed : Color.brandGray).opacity(0.12),
+                            in: Capsule()
+                        )
+
+                    Text(document.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(hasURL ? Color.brandBlack : Color.brandGray)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    // Optional metadata row (only fields the backend actually provides)
+                    if !document.description.isEmpty {
+                        Text(document.description)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.brandGray)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                Text(document.title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(hasURL ? Color.brandBlack : Color.brandGray)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
 
-                if !document.description.isEmpty {
-                    Text(document.description)
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.brandGray)
-                        .lineLimit(2)
-                }
-            }
+                Spacer(minLength: 0)
 
-            Spacer(minLength: 0)
-
-            if hasURL {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.brandGray)
+                // Right-side open/download affordance
+                Image(systemName: hasURL ? "arrow.down.circle.fill" : "xmark.circle")
+                    .font(.system(size: 24))
+                    .foregroundStyle(hasURL ? Color.brandRed : Color.brandGrayLight)
                     .accessibilityHidden(true)
             }
+            .padding(16)
+
+            // MARK: Soft red action strip (≥ 44pt tap target via the whole card)
+            if hasURL {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.right.square.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Apri PDF")
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(Color.brandRed)
+                .padding(.horizontal, 16)
+                .frame(minHeight: 46)
+                .frame(maxWidth: .infinity)
+                .background(Color.brandRed.opacity(0.08))
+            } else {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("PDF non disponibile")
+                        .font(.system(size: 13, weight: .medium))
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(Color.brandGrayLight)
+                .padding(.horizontal, 16)
+                .frame(minHeight: 42)
+                .frame(maxWidth: .infinity)
+                .background(Color.black.opacity(0.04))
+            }
         }
-        .padding(.horizontal, 16)
-        .frame(minHeight: 64)
-        .background(.white.opacity(0.82))
+        .background(.white)
         .clipShape(.rect(cornerRadius: DT.cornerRadius))
         .overlay {
             RoundedRectangle(cornerRadius: DT.cornerRadius)
-                .strokeBorder(.white.opacity(0.75), lineWidth: 0.5)
+                .strokeBorder(.black.opacity(0.06), lineWidth: 0.5)
         }
-        .shadow(color: .black.opacity(0.06), radius: 7, x: 0, y: 2)
-        .opacity(hasURL ? 1.0 : 0.6)
+        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 3)
+        .opacity(hasURL ? 1.0 : 0.7)
     }
 }
 

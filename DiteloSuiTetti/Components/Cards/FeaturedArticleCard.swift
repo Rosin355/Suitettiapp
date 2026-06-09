@@ -6,7 +6,7 @@ struct FeaturedArticleCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .bottomLeading) {
-                RemoteImageView(url: article.imageURL, fallbackColors: article.thumbnailColors)
+                RemoteImageView(url: article.imageURL, logTitle: article.title, fallbackColors: article.thumbnailColors)
                     .frame(height: 108)
                     .clipped()
                     .accessibilityHidden(true)

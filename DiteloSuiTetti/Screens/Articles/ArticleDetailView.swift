@@ -71,7 +71,8 @@ struct ArticleDetailView: View {
         DetailHeroImage(
             imageURL: article.imageURL,
             fallbackColors: article.thumbnailColors,
-            height: heroHeight
+            height: heroHeight,
+            logTitle: article.title
         )
     }
 

@@ -127,10 +127,10 @@ If the `attachments` array fails to decode entirely, treat it as empty — never
 | `titolo` | string | Yes | Event title |
 | `slug` | string | Yes | URL-friendly identifier |
 | `tipo` | string | Yes | Event type label |
-| `data_evento` | string `"YYYY-MM-DD"` | Yes | Date-only string — do NOT parse as ISO 8601 datetime |
-| `ora` | string | Yes | Time as `"HH:mm"` or empty string |
-| `luogo` | string | Yes | Location / venue |
-| `descrizione` | string | Yes | Description body (may contain HTML) |
+| `data_evento` | string `"YYYY-MM-DD"` | Soft | Date-only string — do NOT parse as ISO 8601 datetime; tolerate null/missing (event becomes undated) |
+| `ora` | string | No | Time as `"HH:mm"`; **nullable** — the backend frequently sends `null`. Decode with `decodeIfPresent`; a null `ora` must NOT drop the event |
+| `luogo` | string | Soft | Location / venue; tolerate null (default `""`) |
+| `descrizione` | string | Soft | Description body (may contain HTML); tolerate null (default `""`) |
 | `link` | string | No | External event URL; may be null |
 | `immagine_url` | string | No | Hero image URL; may be null |
 | `attachments` | array | No | Optional array of `AttachmentDTO` objects; same schema as Article attachments |
@@ -139,8 +139,10 @@ If the `attachments` array fails to decode entirely, treat it as empty — never
 
 **Event date parsing**:
 - `data_evento` is `"YYYY-MM-DD"` — parse it with a date-only formatter (`yyyy-MM-dd`, UTC timezone).
-- `ora` is `"HH:mm"` — combine with the date for a full datetime. Use this for calendar intent and the `isUpcoming` / `isPast` classification.
+- `ora` is `"HH:mm"` **or null**. When present, combine with the date for a full datetime; when null/empty, use the date alone (midnight). Use this for calendar intent and the `isUpcoming` / `isPast` classification.
 - If `data_evento` cannot be parsed, treat the event as undated (`rawDate = null`). Display the raw string as a fallback.
+
+**Event decode resilience (mandatory)**: Only `id` and `titolo` are hard-required. `slug`, `tipo`, `data_evento`, `ora`, `luogo`, `descrizione`, and `sync_version` must all tolerate null/missing/wrong-type with safe defaults — a single malformed field must never drop the event from the list.
 
 **Upcoming vs past**:
 - `isUpcoming`: `rawDate != null && rawDate >= startOfToday()`
@@ -165,13 +167,12 @@ If the `attachments` array fails to decode entirely, treat it as empty — never
 | `updated_at` | ISO 8601 string | Soft | Nullable |
 | `sync_version` | integer | Soft | Default `0` if missing |
 
-**URL field variants**: The backend has used multiple field names for the document URL. Attempt all of these in order:
-1. `url`
-2. `file_url`
-3. `document_url`
-4. `link`
+**URL field variants**: The current backend sends a single `url` field, but the client defensively collects every known variant and **prefers a direct `.pdf` URL over a page URL**:
+`url`, `file_url`, `pdf_url`, `document_url`, `attachment_url`, `public_url`, `legacy_url`, `link`. (`.convertFromSnakeCase` maps snake_case → camelCase.)
 
 If none resolve to a non-empty string, the document has no PDF. It **must still appear** in the list. Replace the "Open PDF" button with "PDF non disponibile" or an equivalent placeholder.
+
+**⚠️ Known data caveat (PHASE 6 audit, 2026-06-09)**: 18/25 documents resolve to Supabase storage (`…supabase.co/storage/v1/object/public/document-files/…`) and work (`206 application/pdf`). 7 still carry legacy `www.suitetti.org` URLs — 6 dead `wp-content/*.pdf` (`404`) and 1 WordPress article permalink that serves HTML. These need **backend re-hosting**; the client cannot fix a missing remote file. Android should log status + mime on download and show a graceful error/fallback for non-2xx or non-PDF responses.
 
 **Title field variants**: Try `titolo` first, then `title`, then fall back to `"Documento"`.
 
