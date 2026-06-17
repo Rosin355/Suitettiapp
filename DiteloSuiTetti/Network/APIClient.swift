@@ -4,15 +4,24 @@ enum APIClient {
 
     // MARK: - Public API
 
-    static func fetch<T: Decodable>(_ url: URL, as type: T.Type = T.self) async throws -> T {
-        let request = makeRequest(url: url)
+    /// - Parameter cachePolicy: defaults to `.reloadIgnoringLocalCacheData` so dynamic
+    ///   editorial/config JSON is always read from origin, never served stale from the
+    ///   shared `URLCache` (the `sync-editorial` response carries no `Cache-Control`/
+    ///   `ETag`/`Last-Modified`, so the default protocol policy could otherwise return
+    ///   a cached copy and surface stale content).
+    static func fetch<T: Decodable>(
+        _ url: URL,
+        as type: T.Type = T.self,
+        cachePolicy: URLRequest.CachePolicy = .reloadIgnoringLocalCacheData
+    ) async throws -> T {
+        let request = makeRequest(url: url, cachePolicy: cachePolicy)
         return try await fetchWithRetry(request, as: type, attempt: 0)
     }
 
     // MARK: - Request building
 
-    private static func makeRequest(url: URL) -> URLRequest {
-        var r = URLRequest(url: url, timeoutInterval: 20)
+    private static func makeRequest(url: URL, cachePolicy: URLRequest.CachePolicy) -> URLRequest {
+        var r = URLRequest(url: url, cachePolicy: cachePolicy, timeoutInterval: 20)
         r.httpMethod = "GET"
         r.setValue("application/json", forHTTPHeaderField: "Accept")
         r.setValue("DiteloSuiTetti-iOS/1.0", forHTTPHeaderField: "User-Agent")

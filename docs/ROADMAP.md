@@ -38,6 +38,16 @@ Tasks are tracked here as the single source of truth across AI sessions.
 
 ---
 
+## PHASE 10 — Article cache reconciliation (2026-06-17)
+
+- [x] **Root cause**: `ArticleDTO` decoded `categoria`/`estratto`/`contenuto`/`syncVersion` as non-optional → any article with a null field (e.g. "Grazie!!" with `estratto: null`) was dropped by the per-item `Lossy` decode and never shown.
+- [x] **Fix**: `ArticleDTO` now resilient — only `id`+`titolo` required, everything else tolerates null/missing. No article dropped by empty field or category.
+- [x] **Verification logs**: `[SyncPayload]` / `[ArticleMapper]` / `[ArticleStore]` count + `contains Grazie` + first-10.
+- [x] **Recovery net**: store rebuilt from payload + cache rebuilt if any payload article id is missing from the store (`[ArticleStore] recovery mismatch`).
+- [x] Builds on PHASE-9 cache work (`.reloadIgnoringLocalCacheData` fetch + full `clearAndReplace` reconcile) so the store always mirrors the sync payload.
+
+---
+
 ## PHASE 9 — RC resubmission fixes (2026-06-09)
 
 - [x] **Canonical share URLs** — all share buttons (article/event/document) and "Copia link sito" use `https://www.suitetti.org/{articoli|eventi|documenti}/{slug}` via `AppEnvironment` builders + the new `ShareMessage` util. Legacy `comitaticivici.it` removed from every share path. Share text now invites the reader and links the App Store listing. `[Share] … url=` logs added.

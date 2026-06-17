@@ -7,9 +7,15 @@ struct EditorialSyncCoordinator {
         SyncLogger.shared.append("sync started")
         do {
             let response: EditorialSyncResponseDTO = try await APIClient.fetch(AppEnvironment.syncEditorialEndpoint)
+
+            // Verify the decoded payload before mapping — catches articles dropped at decode.
+            Self.logPayload(response.articles)
+            let mappedArticles = response.articles.map { $0.toArticle() }
+            Self.logMapped(mappedArticles)
+
             // Sort at the source so the payload (and downstream NewContentDetector,
             // which picks `.first` new item) reflect newest-first order, never backend order.
-            let articles  = EditorialSort.articlesByDateDescending(response.articles.map { $0.toArticle() })
+            let articles  = EditorialSort.articlesByDateDescending(mappedArticles)
             let events    = response.events.map { $0.toEvent() }
             let documents = EditorialSort.documentsByDateDescending(response.documents.map { $0.toDocument() })
             let upcoming  = events.filter(\.isUpcoming).count
@@ -31,6 +37,31 @@ struct EditorialSyncCoordinator {
             SyncLogger.shared.append("sync FAIL: \(error)")
             throw error
         }
+    }
+
+    // MARK: - Payload / mapper verification (article-cache reconciliation)
+
+    /// Canary used to confirm a specific backend article survives the whole pipeline.
+    private static let canaryTitle = "Grazie!!"
+
+    private static func logPayload(_ dtos: [ArticleDTO]) {
+        let hasGrazie = dtos.contains { $0.titolo == canaryTitle }
+        NSLog("[SyncPayload] articles count=%d", dtos.count)
+        NSLog("[SyncPayload] contains Grazie=%@", hasGrazie ? "true" : "false")
+        SyncLogger.shared.append("payload articles=\(dtos.count) grazie=\(hasGrazie)")
+        #if DEBUG
+        let iso = ISO8601DateFormatter()
+        for (i, d) in dtos.prefix(10).enumerated() {
+            NSLog("[SyncPayload] [%d] %@ | %@", i, d.titolo,
+                  d.dataPubblicazione.map { iso.string(from: $0) } ?? "nil")
+        }
+        #endif
+    }
+
+    private static func logMapped(_ articles: [Article]) {
+        let hasGrazie = articles.contains { $0.title == canaryTitle }
+        NSLog("[ArticleMapper] mapped count=%d", articles.count)
+        NSLog("[ArticleMapper] contains Grazie=%@", hasGrazie ? "true" : "false")
     }
 
     // MARK: - Post-sync diagnostics

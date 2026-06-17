@@ -45,8 +45,15 @@
 - `EditorialSyncCoordinator` — orchestrates full + delta sync
 - `APIClient` — `URLSession` + `JSONDecoder.editorial` (`.convertFromSnakeCase` + custom ISO8601 date strategy with `Date.distantPast` fallback)
 - `EditorialCacheRepository` — SwiftData persistence layer; populates stores on cold launch. Holds `schemaVersion` (currently **2**, key `editorialCacheSchemaVersion`): on a version mismatch it purges all cached content **once** so a fresh sync repopulates with the current shape/ordering. Bump it whenever the cached shape or ordering changes.
+
+### Cache invalidation / refresh (2026-06-09)
+- **HTTP layer**: `APIClient.fetch` uses `.reloadIgnoringLocalCacheData` by default — dynamic JSON (`sync-editorial`, `app-config`) is always read from origin, never served stale from `URLCache.shared`. The endpoint sends no `Cache-Control`/`ETag`, so the previous default policy could return stale bytes. (Images via custom `ImageCache` are unaffected.)
+- **Persistence layer**: `DiteloSuiTettiApp.performEditorialSync` replaces the SwiftData cache only when `EditorialCachePolicy.shouldReplace(...)` is true — i.e. the `EditorialSyncPayload.contentSignature` (stable SHA-256 of visible text) changed, or forced, or first run. In-memory stores are always updated with the fresh payload.
+- **Refresh triggers**: cold launch; foreground resume (`scenePhase == .active`) when last sync > 10 min old; pull-to-refresh. Network failure keeps cached content (offline banner). `lastSuccessfulSyncDate` + `editorialContentSignature` live in `UserDefaults`.
+- DEBUG log: `[EditorialCache] fetched=… cached=… → REPLACE/KEEP (Grazie!!: …)`.
 - `SyncLogger` — ring-buffer log sink (50 entries); `NSLog` output always on
 - `Lossy<T>` — per-item decode wrapper (in `EditorialSyncResponseDTO.swift`, internal); articles, events, documents all decoded per-item; one bad item never empties the section; first 5 per-item errors logged with index
+- **All three DTOs (`ArticleDTO`/`EventDTO`/`DocumentDTO`) are resilient: only `id` + `titolo` are hard-required; every other field tolerates null/missing.** This matters because `Lossy` would otherwise drop a whole article for a single null field — e.g. `ArticleDTO` used to drop articles with `estratto: null` (the "Grazie!!" bug, 2026-06-17). Never re-introduce a bare `try c.decode(...)` for a non-essential field. Pipeline verification logs: `[SyncPayload]` (post-decode) → `[ArticleMapper]` (post-map) → `[ArticleStore]` (final), each with `count` + `contains Grazie`.
 
 ### In-app update gating (PHASE 8, 2026-06-09)
 - `AppVersionService` fetches `AppEnvironment.appConfigEndpoint` (`…/functions/v1/app-config`) → `AppVersionConfig` (`latest_ios_version`, `minimum_ios_version`, `app_store_url`, `message`; all optional/resilient).

@@ -73,9 +73,17 @@ final class ArticleStore {
     /// is always newest-first and never trusts backend array order.
     private func apply(_ incoming: [Article]) {
         articles = EditorialSort.articlesByDateDescending(incoming)
+        let hasGrazie = articles.contains { $0.title == "Grazie!!" }
+        NSLog("[ArticleStore] final count=%d", articles.count)
+        NSLog("[ArticleStore] contains Grazie=%@", hasGrazie ? "true" : "false")
         if let latest = articles.first {
             NSLog("[ArticleStore] sorted latest article: '%@' (%@)", latest.title, latest.fullDate)
         }
+        #if DEBUG
+        for (i, a) in articles.prefix(10).enumerated() {
+            NSLog("[ArticleStore] [%d] %@ | %@", i, a.title, a.fullDate)
+        }
+        #endif
     }
 
     func failedLoading(message: String) {

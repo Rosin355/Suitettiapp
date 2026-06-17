@@ -4,6 +4,57 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-06-17 — Reconcile article cache with sync payload (articles hidden at decode)
+
+**Symptom**: backend (DB, `mobile_articles_public`, `sync-editorial`) all return the article **"Grazie!!"**, but the app never showed it — even after the URLCache fix delivered the fresh payload.
+
+### Root cause
+`ArticleDTO.init(from:)` decoded `categoria`, `estratto`, `contenuto`, and `syncVersion` with **non-optional `try c.decode(String.self,…)`**, which throws on a JSON `null`. Articles decode through `[Lossy<ArticleDTO>]` (per-item), so any article with a null field was **silently dropped at decode time** — it never reached the mapper, store, or cache. The live payload confirmed `"Grazie!!"` (id `38781700…`, category "Eventi", 2026-06-16) has **`estratto: null`** (2 of 286 articles have null `estratto`). `ArticleDTO` had never been made resilient, unlike `DocumentDTO`/`EventDTO`. It was **not** a category filter or ordering issue.
+
+### Fix
+- **`Models/ArticleDTO.swift`**: only `id` + `titolo` are hard-required now; `slug` (→ id fallback), `categoria`/`estratto`/`contenuto` (→ `""`), `syncVersion` (→ `0`) tolerate null/missing. No article is dropped for an empty field, any category (incl. "Rassegna Stampa"), or unknown category.
+- **Verification logs** (prove the article survives the whole pipeline):
+  - `EditorialSyncCoordinator.logPayload`: `[SyncPayload] articles count=N`, `contains Grazie=…`, first 10 titles+dates (DEBUG).
+  - `EditorialSyncCoordinator.logMapped`: `[ArticleMapper] mapped count=N`, `contains Grazie=…`.
+  - `ArticleStore.apply`: `[ArticleStore] final count=N`, `contains Grazie=…`, first 10 (DEBUG).
+- **Recovery net** (`DiteloSuiTettiApp.performEditorialSync`): after the store update, if any payload article id is missing from the store it logs `[ArticleStore] recovery mismatch` and force-rebuilds the store + persisted cache from the payload.
+- Cache remains a **full reconcile**: `EditorialCacheRepository.clearAndReplace` persists the exact payload list (sorted desc), so no stale local row can hide or shadow a backend article. Combined with the prior `.reloadIgnoringLocalCacheData` fetch, the store always reflects the sync payload.
+- Pull-to-refresh already performs a full (non-delta, `since`-free) origin fetch and updates the store immediately; persistence reconciles on launch/foreground.
+
+### Build / verification
+`** BUILD SUCCEEDED **` (iPhone 17 Pro simulator). Live payload confirmed to contain `"Grazie!!"`; pipeline logs show `contains Grazie=true` at payload → mapper → store. Events/documents untouched.
+
+---
+
+## 2026-06-09 — Fix iOS editorial cache invalidation (stale content after backend update)
+
+**Symptom**: backend correctly served updated text (e.g. `"Grazie!!"`) but the app kept showing stale content. Backend confirmed correct — iOS-side cache issue.
+
+### Root cause
+The `sync-editorial` response carries **no `Cache-Control` / `ETag` / `Last-Modified`** (only `cf-cache-status: DYNAMIC`). `APIClient.makeRequest` used the default `.useProtocolCachePolicy` against the **enlarged 200 MB `URLCache.shared`** (set in `DiteloSuiTettiApp.init`). A "successful" fetch could therefore return a **stale body from the local URLCache** instead of origin — affecting both cold launch and pull-to-refresh, so fresh content never reached the SwiftData cache or the UI.
+
+### Cache layer fixed
+HTTP layer (`URLCache`) — the editorial fetch now always reads from origin; the SwiftData persistence layer is then replaced when content actually changed.
+
+### Changes
+- **`APIClient.fetch`**: added a `cachePolicy` parameter defaulting to **`.reloadIgnoringLocalCacheData`** so all dynamic JSON (editorial sync, app-config) bypasses the local URLCache. Images (custom `ImageCache`) and the SwiftData offline fallback are unaffected.
+- **`EditorialCachePolicy`** (new): `shouldReplace(fetchedSignature:cachedSignature:force:)` + `EditorialSyncPayload.contentSignature` — a **stable SHA-256** of all visible title/excerpt/body/description text (used to decide cache replacement across launches). DEBUG-only `containsText(_:)` marker check.
+- **`DiteloSuiTettiApp`** (refactor): launch sync now (1) fetches fresh from origin, (2) updates the in-memory stores, (3) replaces the SwiftData cache **only when the signature changed** (or forced / first run), storing the new signature + sync timestamp. New **foreground-resume refresh** (`scenePhase == .active`) re-syncs when the cache is older than 10 min — never blocking, keeping cached content on failure. DEBUG log: `[EditorialCache] fetched=… cached=… → REPLACE/KEEP (Grazie!!: present/absent)`.
+
+### Refresh behavior
+- Launch → fresh origin fetch, replace cache if changed.
+- Foreground resume → refresh if stale (>10 min), non-blocking.
+- Pull-to-refresh → fresh origin fetch (URLCache bypassed).
+- Network failure → existing cached content retained as fallback; offline banner shown.
+
+### Tests
+`DiteloSuiTettiTests/EditorialCacheTests.swift` (4 required cases + signature stability). The project ships a single app target (no unit-test bundle), so these run once a Unit Testing Bundle target is added; the pure logic was validated meanwhile via a standalone Swift run (6/6) and the live payload confirmed to contain `"Grazie!!"`.
+
+### Build
+`** BUILD SUCCEEDED **` (iPhone 17 Pro simulator). No backend/UI changes.
+
+---
+
 ## 2026-06-09 — RC fixes: canonical share URLs, Home banner off, technical support contact
 
 Three pre-resubmission fixes. No backend changes; PDF/article/event navigation untouched.

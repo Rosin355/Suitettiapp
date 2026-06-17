@@ -25,6 +25,14 @@ struct DiteloSuiTettiApp: App {
 
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding      = false
     @State private var showNotificationPrompt                             = false
+    @State private var didInitialLoad                                     = false
+    @Environment(\.scenePhase) private var scenePhase
+
+    // Cache-invalidation bookkeeping.
+    private static let signatureKey = "editorialContentSignature"
+    private static let syncDateKey  = "lastSuccessfulSyncDate"
+    /// On foreground resume, only re-sync if the last successful sync is older than this.
+    private static let foregroundStaleThreshold: TimeInterval = 600  // 10 minutes
 
     // Screenshot capture mode: launch with --screenshots to bypass onboarding and inject
     // deterministic demo content. Use in Xcode scheme or App Store Connect automation.
@@ -45,6 +53,13 @@ struct DiteloSuiTettiApp: App {
                             // Remote-config update check on launch (skipped for App Store
                             // screenshot automation). Never blocks content if it fails.
                             if !isScreenshotMode { await appVersionStore.check() }
+                        }
+                        // Refresh editorial content when returning to the foreground if
+                        // the local cache has gone stale (does not block the UI).
+                        .onChange(of: scenePhase) { _, newPhase in
+                            if newPhase == .active {
+                                Task { await refreshOnForegroundIfStale() }
+                            }
                         }
                         .transition(.opacity)
                 } else if showNotificationPrompt {
@@ -98,40 +113,96 @@ struct DiteloSuiTettiApp: App {
             UIApplication.shared.registerForRemoteNotifications()
         }
 
+        // Cache-first: show persisted content immediately, then sync fresh from origin.
         let cached = cache.loadPayload()
         let hasCachedContent = cached != nil
 
         if let cached {
-            store.replace(with: cached.articles)
-            eventStore.replace(with: cached.events)
-            documentStore.replace(with: cached.documents)
+            replaceStores(with: cached)
         } else {
             store.beginLoading()
             eventStore.beginLoading()
             documentStore.beginLoading()
         }
 
+        await performEditorialSync(previous: cached, hasCachedContent: hasCachedContent, force: false)
+
+        didInitialLoad = true
+        // Signal ContentView that stores are ready for deep link resolution
+        router.contentDidLoad = true
+    }
+
+    /// Re-sync editorial content on foreground resume when the cache is stale.
+    /// Never blocks; on failure the current content is left untouched.
+    private func refreshOnForegroundIfStale() async {
+        guard didInitialLoad, !isScreenshotMode else { return }
+        let last = UserDefaults.standard.object(forKey: Self.syncDateKey) as? Date ?? .distantPast
+        let age = Date().timeIntervalSince(last)
+        guard age > Self.foregroundStaleThreshold else {
+            NSLog("[EditorialCache] foreground refresh skipped — cache age %.0fs", age)
+            return
+        }
+        NSLog("[EditorialCache] foreground refresh — cache age %.0fs", age)
+        await performEditorialSync(previous: nil, hasCachedContent: true, force: false)
+    }
+
+    private func replaceStores(with payload: EditorialSyncPayload) {
+        store.replace(with: payload.articles)
+        eventStore.replace(with: payload.events)
+        documentStore.replace(with: payload.documents)
+    }
+
+    /// Fetches fresh editorial content (origin, never URLCache), updates the in-memory
+    /// stores, and replaces the persisted cache only when the content signature changed.
+    /// On fetch failure the cached content remains as a safe fallback.
+    private func performEditorialSync(previous: EditorialSyncPayload?, hasCachedContent: Bool, force: Bool) async {
         do {
             let payload = try await coordinator.syncAll()
-            store.replace(with: payload.articles)
-            eventStore.replace(with: payload.events)
-            documentStore.replace(with: payload.documents)
-            for article in payload.articles.prefix(5) {
-                NSLog("[ContentLoad] article '%@' imageURL: %@ attachments: %d",
-                      article.slug,
-                      article.imageURL?.absoluteString ?? "nil",
-                      article.relatedDocuments.count)
-            }
-            try? cache.clearAndReplace(with: payload)
+            replaceStores(with: payload)
 
-            // Schedule notifications for newly detected content (only when cache existed before)
-            if let previous = cached {
+            // Recovery net: the store MUST contain every article the payload returned.
+            // If any are missing (should never happen now that ArticleDTO decodes
+            // resiliently), force a rebuild of both the store and the persisted cache.
+            let missing = Set(payload.articles.map(\.id)).subtracting(store.articles.map(\.id))
+            if !missing.isEmpty {
+                NSLog("[ArticleStore] recovery mismatch — %d payload article(s) missing from store; rebuilding from payload", missing.count)
+                store.replace(with: payload.articles)
+            }
+
+            let fetchedSignature = payload.contentSignature
+            let cachedSignature = UserDefaults.standard.string(forKey: Self.signatureKey)
+            let replace = EditorialCachePolicy.shouldReplace(
+                fetchedSignature: fetchedSignature,
+                cachedSignature: cachedSignature,
+                force: force || !missing.isEmpty
+            )
+
+            #if DEBUG
+            NSLog("[EditorialCache] fetched=%@ cached=%@ → %@ (Grazie!!: %@)",
+                  String(fetchedSignature.prefix(12)),
+                  cachedSignature.map { String($0.prefix(12)) } ?? "nil",
+                  replace ? "REPLACE cache" : "KEEP cache",
+                  payload.containsText("Grazie!!") ? "present" : "absent")
+            #endif
+
+            if replace {
+                try? cache.clearAndReplace(with: payload)
+                UserDefaults.standard.set(fetchedSignature, forKey: Self.signatureKey)
+            }
+            // Record a successful sync even when content was unchanged, so foreground
+            // staleness is measured from the last network success, not the last change.
+            UserDefaults.standard.set(Date(), forKey: Self.syncDateKey)
+
+            // Schedule notifications for newly detected content (only on launch, when a
+            // prior cache existed — skipped on foreground refresh to avoid duplicates).
+            if let previous {
                 let detected = NewContentDetector.detect(previous: previous, fresh: payload)
                 if let a = detected.newArticle  { await LocalNotificationManager.shared.scheduleIfNeeded(for: a) }
                 if let e = detected.newEvent    { await LocalNotificationManager.shared.scheduleIfNeeded(for: e) }
                 if let d = detected.newDocument { await LocalNotificationManager.shared.scheduleIfNeeded(for: d) }
             }
         } catch {
+            NSLog("[EditorialCache] sync failed — keeping cached content: %@", "\(error)")
             if hasCachedContent {
                 store.setOfflineWarning()
                 eventStore.setOfflineWarning()
@@ -143,8 +214,5 @@ struct DiteloSuiTettiApp: App {
                 documentStore.failedLoading(message: message)
             }
         }
-
-        // Signal ContentView that stores are ready for deep link resolution
-        router.contentDidLoad = true
     }
 }
