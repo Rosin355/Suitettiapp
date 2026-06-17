@@ -4,6 +4,23 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-06-17 — Release 1.0.2 (build 2)
+
+Version bump: `CFBundleShortVersionString = 1.0.2`, `CFBundleVersion = 2` (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `project.pbxproj`).
+
+Rollup of changes shipped since 1.0.1 (see the dated entries below for detail):
+- Improved editorial synchronization — fresh-from-origin fetch (`.reloadIgnoringLocalCacheData`), signature-gated cache replacement, foreground-resume refresh.
+- Better handling of article/event/document updates — resilient decoding (`ArticleDTO` no longer drops articles with a null field such as `estratto`), full cache reconciliation against the sync payload, recovery net.
+- Share links now use canonical `https://www.suitetti.org` URLs (article/event/document), with inviting share text + App Store link.
+- Added "Supporto tecnico" section in About with `mailto:` email integration (version/build-stamped subject).
+- Improved premium PDF cards and the official brand-logo fallback image for imageless editorial content.
+- Home festival CTA disabled (kept as a future promotional banner slot).
+- App version update system via the `app-config` remote-config endpoint (soft/forced update prompts).
+- Android push-notification infrastructure prepared in docs/contract only — **no change to iOS APNs**.
+- Backend mitigation for stale-content synchronization (server side; no iOS change required).
+
+---
+
 ## 2026-06-17 — Reconcile article cache with sync payload (articles hidden at decode)
 
 **Symptom**: backend (DB, `mobile_articles_public`, `sync-editorial`) all return the article **"Grazie!!"**, but the app never showed it — even after the URLCache fix delivered the fresh payload.

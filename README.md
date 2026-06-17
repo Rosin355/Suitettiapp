@@ -6,8 +6,8 @@ Native iOS app for [Ditelo sui Tetti](https://comitaticivici.it), a civic editor
 
 ## Current Version
 
-**v1.0 Release Candidate** — App Store pre-submission  
-*Last updated: 9 June 2026*
+**v1.0.2 (build 2)** — App Store submission  
+*Last updated: 17 June 2026*
 
 ### Release Candidate Status
 

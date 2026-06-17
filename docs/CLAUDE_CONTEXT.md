@@ -11,7 +11,7 @@
 - **Platform**: iOS 26+ (SwiftUI native, iPhone + iPad)
 - **Developer**: Digital Yogin srl
 - **Style**: Civic, editorial, trustworthy — iOS 26 Liquid Glass direction
-- **Current stage**: v1.0 Release Candidate — App Store pre-submission
+- **Current stage**: v1.0.2 (build 2) — App Store submission. Version is set by `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `project.pbxproj` (Info.plist version keys are generated, not hardcoded).
 
 ---
 

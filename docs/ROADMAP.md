@@ -38,6 +38,19 @@ Tasks are tracked here as the single source of truth across AI sessions.
 
 ---
 
+## Release 1.0.2 (build 2) — 2026-06-17
+
+Versioned release bundling PHASES 6–10. `MARKETING_VERSION = 1.0.2`, `CURRENT_PROJECT_VERSION = 2`.
+Highlights: reliable editorial sync + resilient article/event/document decoding (no dropped content),
+canonical `suitetti.org` share links, technical-support email section, premium PDF cards + brand
+fallback image, Home festival CTA disabled (future banner slot), in-app update system via `app-config`,
+Android push infra documented (iOS APNs unchanged), backend stale-content mitigation. See `RELEASE_NOTES.md`.
+
+**Still pending (backend / submission)**: deploy `app-config` Edge Function; re-host the 7 legacy/dead
+document URLs (PHASE 6); APNs production killed-app push QA; App Store screenshots + metadata.
+
+---
+
 ## PHASE 10 — Article cache reconciliation (2026-06-17)
 
 - [x] **Root cause**: `ArticleDTO` decoded `categoria`/`estratto`/`contenuto`/`syncVersion` as non-optional → any article with a null field (e.g. "Grazie!!" with `estratto: null`) was dropped by the per-item `Lossy` decode and never shown.
