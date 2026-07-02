@@ -581,6 +581,24 @@ fun articleShareText(title: String, slug: String) = """
 ```
 (iOS appends the App Store listing `https://apps.apple.com/it/app/suitetti/id6772963310`; swap the Play Store URL on Android.)
 
-**Home promo banner**: the festival CTA is disabled in v1.0 (event already in "Prossimi eventi"). Keep a banner slot for the future but don't render it.
+**Home promo banner** (updated 2026-07-02): now an active **Festival spotlight** that opens the Festival page in the **external browser** — see the "Evergreen hero + Festival spotlight" addendum below.
 
 **Technical support**: the About screen has a "Supporto tecnico" card → email **info@digitalyogin.com**, subject `Supporto Ditelo sui Tetti iOS v{version} ({build})` (Android: `… Android v{versionName} ({versionCode})`) + pre-filled Italian body. Use `ACTION_SENDTO` `mailto:`; if nothing resolves, show a dialog with the address. Percent-encode subject/body.
+
+---
+
+## Addendum — Evergreen hero + Festival spotlight (2026-07-02)
+
+The website published post-festival videos + extra material. The app was made evergreen while surfacing the 3° Festival via an in-app web view. Mirror on Android:
+
+**Hero stats are evergreen.** The Home hero strip (`HeroStatsView`) shows `100+ Associazioni · 312 Comitati · Italia / Rete civica` — all static, none date-bound. Do **not** hardcode a date/edition stat (the old `16 giu · 3° Festival` went stale). The dead `HomeStatsStrip` was removed.
+
+**Festival spotlight card → external browser.** A reusable dark promo card (`HomePromoCard`: eyebrow chip + title + arrow; whole card is one ≥48dp button with a merged content description) sits under the events section. Tapping opens the Festival page in the **external browser** (iOS: SwiftUI `openURL`):
+
+- **Android**: open the URL externally with `Intent(Intent.ACTION_VIEW, uri)` (default browser) — mirror the iOS "open in Safari" behavior. Do **not** use a `WebView` / Custom Tab for this card; the festival page is rich web content that reads best full-screen in the browser.
+- The destination is `AppEnvironment.festivalURL` on iOS = `https://www.suitetti.org/progetti/festival-umano-tutto-intero` (verified live: the festival hub with videos, gallery, and program/press downloads). It is a **website destination, not part of the sync payload.**
+- Keep the component generic (copy + URL are the only time-bound values) so it can be repurposed for a future campaign.
+
+**Onboarding slide 2** is evergreen: `IL FESTIVAL` / `SUI TETTI / FESTIVAL` / "Ci vediamo sui tetti." (dropped `3°`, `2026`, and the future-tense "Ti aspettiamo").
+
+**Option B (native Festival/Project detail) is backend-gated.** A festival is already a normal event (`tipo: "Festival"`) with the full native event detail (cover, description, external link, PDF attachments). A dedicated native detail with a **video player** + **related articles** needs new API fields (`video_url` or typed `video` attachments; `related_article_ids` or a shared `project_id`) — see `API_CONTRACT.md` → "Proposed: Festival / Project content". Build the same on Android once those fields ship.

@@ -501,6 +501,36 @@ The iOS app is fully wired for attachments (PHASE-4). After the next sync follow
 
 ---
 
+## Proposed: Festival / Project content (Option B — native detail)
+
+The app surfaces the 3° Festival two ways today: (1) as a normal **event** (`tipo: "Festival"`) with its native `EventDetailView` — cover image, description, external `link`, and PDF `attachments`; and (2) via the Home "Speciale Festival" card, which opens the website festival hub (`https://www.suitetti.org/progetti/festival-umano-tutto-intero`) in the **external browser** (for the post-event **videos + extra material** that are not in this payload).
+
+A fully native `FestivalDetailView` / `ProjectDetailView` (roadmap "Option B") needs two things the current contract does **not** expose.
+
+### 1. Video
+
+No field currently carries a playable video. Add to events (or a new content type):
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `video_url` | string \| null | Direct MP4/HLS **or** a YouTube/Vimeo watch URL |
+| `video_provider` | string \| null | Optional hint: `"youtube"` \| `"vimeo"` \| `"file"` — lets the client choose embed vs. native `AVPlayer` without sniffing the URL |
+
+**Alternative (no schema change)**: deliver videos as typed `attachments` (`type: "video"` + `url`) through the existing polymorphic `allegati` pipeline. The client already tolerates arbitrary attachment types.
+
+### 2. Related articles
+
+No event↔article relationship exists today. Options:
+
+- **Explicit list on the event**: `related_article_ids: [uuid]` (or `related_article_slugs: [string]`) — simplest for the client; resolve against the already-synced `ArticleStore`.
+- **Shared project key**: nullable `project_id: uuid` on both `articles` and `events`; the client groups everything with the same key. More flexible if "projects" become first-class (a `projects` table: `title`, `description`, `cover_url`, `video_url`, `website_url`).
+
+**Recommendation**: ship videos as typed `attachments` (zero schema change) and add `related_article_ids` to events — that unlocks Option B without a new content type. Promote to a `projects` table only if festivals/campaigns need a hub independent of a single event date.
+
+Until these ship, the Home festival card (opens `AppEnvironment.festivalURL` in the browser) remains the source of truth for festival videos / extra material.
+
+---
+
 ## Push Notification Payload
 
 ### Token Registration

@@ -295,7 +295,7 @@ private struct OnboardingSlide2: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 // Badge
-                Text("3° FESTIVAL")
+                Text("IL FESTIVAL")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.brandBlack)
                     .kerning(0.8)
@@ -310,7 +310,7 @@ private struct OnboardingSlide2: View {
                     .font(.system(size: 48, weight: .black))
                     .foregroundStyle(.white)
                     .kerning(-2)
-                Text("FESTIVAL 2026")
+                Text("FESTIVAL")
                     .font(.system(size: 48, weight: .black))
                     .foregroundStyle(.white)
                     .kerning(-2)
@@ -325,7 +325,7 @@ private struct OnboardingSlide2: View {
                     .padding(.bottom, 22)
 
                 // Body
-                Text("Tre giorni di incontri, idee e testimonianze per costruire una società più giusta, solidale e sussidiaria.")
+                Text("Un appuntamento di incontri, idee e testimonianze per costruire una società più giusta, solidale e sussidiaria.")
                     .font(.system(size: 15))
                     .foregroundStyle(.white.opacity(0.56))
                     .lineSpacing(6)
@@ -333,7 +333,7 @@ private struct OnboardingSlide2: View {
                     .frame(maxWidth: 300, alignment: .leading)
 
                 // Closing
-                Text("Ti aspettiamo. ♡")
+                Text("Ci vediamo sui tetti. ♡")
                     .font(Font.custom("Georgia", size: 17).italic())
                     .foregroundStyle(.white.opacity(0.70))
                     .padding(.top, 14)
@@ -348,10 +348,10 @@ private struct OnboardingSlide2: View {
             .onAppear { appeared = true }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(
-                "3° Festival. Sui Tetti Festival 2026. " +
+                "Il Festival. Sui Tetti Festival. " +
                 "Insieme per il bene comune. " +
-                "Tre giorni di incontri, idee e testimonianze per costruire una società più giusta, solidale e sussidiaria. " +
-                "Ti aspettiamo."
+                "Un appuntamento di incontri, idee e testimonianze per costruire una società più giusta, solidale e sussidiaria. " +
+                "Ci vediamo sui tetti."
             )
         }
     }

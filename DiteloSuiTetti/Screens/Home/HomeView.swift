@@ -4,6 +4,7 @@ struct HomeView: View {
     @Binding var selectedTab: AppTab
     @State private var scrolledPastHero = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ScrollView {
@@ -18,11 +19,20 @@ struct HomeView: View {
                     HomeFeaturedArticlesSection(selectedTab: $selectedTab)
                     HomeEventsSection()
                     HomeQuoteSection()
-                    // TODO: Future promotional banner slot — disabled for v1.0 because the
-                    // event is already surfaced in Prossimi eventi. Re-enable HomeReferendumCTA
-                    // (below) and wire its tap action when a real destination exists.
-                    // HomeReferendumCTA()
-                    //     .padding(.bottom, 8)
+                    // Time-bound spotlight — opens the Festival page (rich web content:
+                    // videos + extra material, not in the sync payload) in the external
+                    // browser via SwiftUI openURL. Copy + destination URL are the only
+                    // festival-specific values; swap them (and AppEnvironment.festivalURL)
+                    // for a future promo.
+                    HomePromoCard(
+                        eyebrow: "SPECIALE",
+                        title: "3° Festival — rivivi video e materiali",
+                        accessibilityHintText: "Apre la pagina del Festival sul sito web"
+                    ) {
+                        openURL(AppEnvironment.festivalURL)
+                    }
+                    .padding(.horizontal, DT.padding)
+                    .padding(.bottom, 8)
                     // Ensures last card scrolls fully above the floating glass tab bar
                     Color.clear.frame(height: 130)
                 }
@@ -73,44 +83,6 @@ private struct HomeQuoteSection: View {
         }
         .padding(.horizontal, DT.padding)
         .padding(.bottom, 12)
-    }
-}
-
-private struct HomeReferendumCTA: View {
-    var body: some View {
-        GCard {
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    CategoryChip(
-                        text: "FESTIVAL",
-                        color: .brandYellow,
-                        background: .brandYellow.opacity(0.18)
-                    )
-                    Text("Scopri l'evento del 16 giugno")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-                        .kerning(-0.4)
-                }
-
-                Spacer()
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(.brandRed)
-                    .clipShape(.rect(cornerRadius: 12))
-                    .shadow(color: .brandRed.opacity(0.4), radius: 8, x: 0, y: 4)
-            }
-            .padding(18)
-            .background(
-                LinearGradient(
-                    colors: [.brandBlack, Color(red: 37/255, green: 37/255, blue: 37/255)],
-                    startPoint: .leading, endPoint: .trailing
-                )
-            )
-        }
-        .padding(.horizontal, DT.padding)
     }
 }
 

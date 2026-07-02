@@ -4,6 +4,54 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-07-02 — Festival card opens the page in the browser (supersedes the in-app WebView)
+
+**Change**: The Home "Speciale 3° Festival" card now opens the Festival page **externally in Safari** instead of presenting an in-app WebView sheet — the festival page is rich web content (videos "Il Salotto", photo gallery, program/press downloads) that reads best full-screen in the browser.
+
+- **`HomeView`** — tap action is now `openURL(AppEnvironment.festivalURL)` via `@Environment(\.openURL)` (the SwiftUI-native external-open, already used in `EventDetailView`; no UIKit per CLAUDE.md). Removed the `showFestival` state and the `.sheet { WebSheet(...) }` presentation. Accessibility hint updated to **"Apre la pagina del Festival sul sito web"**.
+- **`AppEnvironment.festivalURL`** → `https://www.suitetti.org/progetti/festival-umano-tutto-intero` (verified live: "Rivivi il 3° Festival dell'Umano Tutto Intero" — videos, gallery, downloads). The earlier `/3-festival` / article URLs are superseded.
+- **WebView components retained**: `InAppWebView`, `WebPageView`, `WebSheet` stay in the codebase (reusable) but are no longer wired to any screen after this change.
+- Sync / PDF / push / share / app-config untouched.
+
+### Build
+`** BUILD SUCCEEDED **` (Debug, iPhone 17 Pro simulator); no warnings in changed files.
+
+### Commit
+`polish: open festival page in browser` (pushed to `main`).
+
+---
+
+## 2026-07-02 — Evergreen Home hero + post-festival spotlight
+
+**Goal**: The website published new post-festival videos + extra material. Make the app evergreen (remove date-bound "16 giu / 3° Festival" references) while surfacing the 3° Festival properly. Chosen approach: **hybrid** — an in-app WebView spotlight card now, a native detail documented for later (Option B).
+
+### Audit
+The only *hardcoded* stale references were: `HeroStatsView` (live hero stat), `HomeStatsStrip.swift` (dead code), `HomeView.HomeReferendumCTA` (already commented out), and `OnboardingView` slide 2. A Festival is otherwise already a first-class **event** (`tipo: "Festival"`) with a native `EventDetailView` (cover, description, external link, PDF attachments) and still appears in Articoli + Eventi → Passati. The website-only **videos/extra material** are not in the `sync-editorial` payload, so a WebView is the only zero-backend way to surface them today.
+
+### Changes (iOS)
+- **`HeroStatsView`** — third stat `16 giu · 3° Festival` → `Italia · Rete civica` (evergreen). Small-label contrast `white 0.56 → 0.72` on brand red.
+- **Deleted `Screens/Home/HomeStatsStrip.swift`** — unused legacy strip carrying the same stale stat (auto-drops from the build via the synchronized file group).
+- **`Components/Cards/HomePromoCard.swift`** (new) — reusable, generic dark promo card (eyebrow chip + title + arrow); whole card is a ≥44pt button with a combined VoiceOver label + hint. Replaces the deleted festival-specific `HomeReferendumCTA`.
+- **`HomeView`** — renders `HomePromoCard` ("SPECIALE · 3° Festival — rivivi video e materiali"); tap presents a `WebSheet` for `AppEnvironment.festivalURL`. Removed the stale `HomeReferendumCTA` struct.
+- **`Components/Web/InAppWebView.swift`** — added a `WKNavigationDelegate` coordinator exposing optional `isLoading` / `loadError` bindings (ignores `NSURLErrorCancelled`; guards against reload loops). Also rejects HTTP **4xx/5xx** main-frame responses into the error state, so a 404 shows the app's error UI, not the website's own 404 page. Backward-compatible — the plain `InAppWebView(url:)` call site is unchanged.
+- **`Screens/Web/WebPageView.swift`** — real loading spinner + graceful error `EmptyStateView` ("Riprova" recreates the web view via an `id` token; "Apri nel browser" via `openURL`).
+- **`Screens/Web/WebSheet.swift`** (new) — `NavigationStack` + Close button wrapper for modal web presentation; reusable.
+- **`Configuration/AppEnvironment.swift`** — added `festivalURL` = the live festival article `https://www.suitetti.org/articoli/3-festival-dellumano-tutto-intero` (verified; the dedicated `/3-festival` hub 404s today — repoint when published). Single source of truth for the spotlight card.
+- **`OnboardingView` slide 2** — evergreen: `IL FESTIVAL` / `FESTIVAL` / "Ci vediamo sui tetti." (was `3° FESTIVAL` / `FESTIVAL 2026` / "Ti aspettiamo."); accessibility label updated to match.
+- **`HeroBrandView`** — combined VoiceOver header ("Ditelo sui Tetti — per il bene comune") instead of three fragments.
+
+### Not touched (verified in scope)
+Article/event/document sync, PDF opening, push notifications, share links, and the `app-config` update alert — none modified.
+
+### Backend follow-up
+- `AppEnvironment.festivalURL` = live festival article (`/articoli/3-festival-dellumano-tutto-intero`); repoint to a dedicated `/3-festival` hub once that page is published.
+- Option B (native `FestivalDetailView` with video + related articles) needs new fields — documented in `API_CONTRACT.md` → "Proposed: Festival / Project content".
+
+### Build
+`** BUILD SUCCEEDED **` (Debug, iPhone 17 Pro simulator). 28 pre-existing warnings; none in any changed/new file.
+
+---
+
 ## 2026-06-17 — Release 1.0.2 (build 2)
 
 Version bump: `CFBundleShortVersionString = 1.0.2`, `CFBundleVersion = 2` (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `project.pbxproj`).

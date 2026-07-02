@@ -24,6 +24,11 @@ struct HeroBrandView: View {
                 .foregroundStyle(.brandYellowLight)
                 .kerning(-2.5 * subtitleSize / 66)
         }
+        // Read the lockup as one header instead of three fragments ("Ditelo",
+        // "sui Tetti.", "PER IL BENE COMUNE") in VoiceOver.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Ditelo sui Tetti — per il bene comune")
+        .accessibilityAddTraits(.isHeader)
     }
 
     private var tagline: some View {

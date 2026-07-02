@@ -64,7 +64,7 @@
 - **Canonical share domain** = `AppEnvironment.publicWebsiteURL` (`https://www.suitetti.org`). All shareable links use `articleShareURL/eventShareURL/documentShareURL(slug:)` → `…/{articoli|eventi|documenti}/{slug}`. Never share legacy/preview domains (`comitaticivici.it`, `*.lovable.app`). `AppEnvironment.websiteURL` (`comitaticivici.it`) remains only for the privacy/terms web pages, not sharing.
 - `ShareMessage` builds inviting share text (title + canonical URL + `AppEnvironment.appStoreURL`), used by the three detail-view `ShareLink`s. `[Share] …` logs on share-button appear.
 - **Technical support**: `AboutSupportSection` opens `mailto:` `AppEnvironment.supportEmail` (`info@digitalyogin.com`) with subject `Supporto Ditelo sui Tetti iOS v{version} ({build})`; fallback alert if Mail is unavailable.
-- **Home promo banner**: `HomeReferendumCTA` exists but is **not rendered** in v1.0 (commented out in `HomeView` with a TODO) — reserved as a future banner slot.
+- **Home promo banner** (2026-07-02): `HomePromoCard` (reusable, generic) renders the "SPECIALE · 3° Festival" spotlight in `HomeView`; tapping opens `AppEnvironment.festivalURL` in the **external browser** via SwiftUI `openURL` — the festival page (`/progetti/festival-umano-tutto-intero`) is rich web content (videos, gallery, downloads). The in-app WebView components (`InAppWebView`/`WebPageView`/`WebSheet`) remain in the codebase but are **not wired to this card**. It replaced the old festival-specific `HomeReferendumCTA` (deleted). Swap the card's copy + `AppEnvironment.festivalURL` for a future promo. A Festival is otherwise a normal event (`tipo: "Festival"`) with the full native `EventDetailView`; native video + related-articles (Option B) is backend-gated — see API_CONTRACT "Proposed: Festival / Project content".
 
 ### Navigation
 - `ContentView` → `TabView` with four tabs: `.home`, `.articoli`, `.documenti`, `.chiSiamo`
@@ -114,6 +114,9 @@ Applied to: `ArticoliView`, `DocumentiView`, `EventiView`, `AboutView`, `Sosteni
 - `EmptyStateView` — illustrated empty/error state: icon badge (88pt circle), title, subtitle, up to 2 actions
 - `LinkedDocumentCard` — compact card for a linked PDF; `RelatedDocument` model (`Codable`); NavigationLink to `PDFReaderView` when URL present; disabled state when nil
 - `AttachmentDTO` — flexible decoder for attachment items; handles Italian/English field names; never throws
+- `HomePromoCard` — reusable dark Home promo/spotlight card (eyebrow chip + title + arrow); whole card is a ≥44pt button with a combined VoiceOver label + hint
+- `InAppWebView` — `WKWebView` wrapper; inline media playback; optional `isLoading`/`loadError` bindings via a `WKNavigationDelegate` coordinator (ignores `NSURLErrorCancelled`)
+- `WebPageView` / `WebSheet` — in-app web presentation with real loading spinner + error state ("Riprova" recreates the web view; "Apri nel browser" via `openURL`); `WebSheet` adds a `NavigationStack` + Close button for modal use
 
 ---
 

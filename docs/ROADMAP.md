@@ -38,6 +38,25 @@ Tasks are tracked here as the single source of truth across AI sessions.
 
 ---
 
+## Post-1.0.2 — Evergreen Home hero + Festival spotlight (2026-07-02)
+
+Website (`suitetti.org`) published post-festival videos + extra material. The app was made evergreen while surfacing the 3° Festival properly — **hybrid**: an in-app WebView spotlight card now, a native detail later (Option B, backend-gated).
+
+- [x] **Evergreen hero stats** — `HeroStatsView` third stat `16 giu · 3° Festival` → `Italia · Rete civica`; no date-bound value can go stale. Small-label contrast lifted (white `0.56` → `0.72` on brand red).
+- [x] **Removed dead `HomeStatsStrip.swift`** — legacy pre-refactor strip, referenced nowhere, still carrying the stale festival stat.
+- [x] **Stale CTA removed** — deleted the commented `HomeReferendumCTA` ("Scopri l'evento del 16 giugno"); replaced by the reusable, generic `HomePromoCard`.
+- [x] **Festival spotlight card** — Home `HomePromoCard` ("SPECIALE · 3° Festival — rivivi video e materiali"); tapping opens `AppEnvironment.festivalURL` in the **external browser** (SwiftUI `openURL`). Whole card is a ≥44pt tap target with a combined VoiceOver label + hint.
+- [x] **In-app web layer (reusable, retained)** — `InAppWebView` has a `WKNavigationDelegate` coordinator exposing `isLoading`/`loadError` (ignores `NSURLErrorCancelled`, converts HTTP 4xx/5xx to the error state); `WebPageView` shows a real loading spinner + graceful error state; `WebSheet` wraps it in a `NavigationStack` with a Close button. **Kept as components but no longer wired to a screen** — the festival card now opens in the external browser instead.
+- [x] **Onboarding slide 2 evergreen** — dropped `3°` / `FESTIVAL 2026` / "Ti aspettiamo" (future tense for a now-past event); now `IL FESTIVAL` / `FESTIVAL` / "Ci vediamo sui tetti". Accessibility label updated to match.
+- [x] **Hero brand VoiceOver** — `HeroBrandView` lockup now reads as one header element instead of three fragments.
+- [x] `** BUILD SUCCEEDED **` (iPhone 17 Pro simulator); no new warnings. Article/event sync, PDF opening, push, share links, and the app-config update alert are all untouched.
+
+**Backend / follow-up**:
+- [x] **`AppEnvironment.festivalURL` set** — `https://www.suitetti.org/progetti/festival-umano-tutto-intero` (verified live 2026-07-02: the festival hub "Rivivi il 3° Festival dell'Umano Tutto Intero" with videos, gallery, and program/press downloads). Opened in the **external browser** by the Home festival card.
+- [ ] **Option B (native FestivalDetailView) is backend-gated** — events expose no `video_url` and no event↔article relation. See `API_CONTRACT.md` → "Proposed: Festival / Project content".
+
+---
+
 ## Release 1.0.2 (build 2) — 2026-06-17
 
 Versioned release bundling PHASES 6–10. `MARKETING_VERSION = 1.0.2`, `CURRENT_PROJECT_VERSION = 2`.
@@ -138,6 +157,7 @@ document URLs (PHASE 6); APNs production killed-app push QA; App Store screensho
 
 ## v1.1 Candidates (post-launch)
 
+- [ ] **Native `FestivalDetailView` / `ProjectDetailView` (Option B)** — cover + description + **video player** + **related articles** + related PDFs + external link. **Blocked on backend**: events expose no `video_url` and no event↔article relation. `EventDetailView` already covers cover/description/PDFs/link, so this is largely additive. See `API_CONTRACT.md` → "Proposed: Festival / Project content".
 - [ ] Spotlight Search — `CSSearchableItem` per article/document; search from Home Screen
 - [ ] Universal Links — `apple-app-site-association` on `www.suitetti.org`; `onOpenURL` in `ContentView`
 - [ ] Widgets — `AppIntents` + `WidgetKit`; latest article or upcoming event widget

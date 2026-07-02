@@ -49,6 +49,19 @@ enum AppEnvironment {
     /// Public App Store listing, appended to share messages.
     static let appStoreURL = URL(string: "https://apps.apple.com/it/app/suitetti/id6772963310")!
 
+    /// Festival hub on the public website — post-event videos + extra material that are
+    /// NOT part of the editorial `sync-editorial` payload, so they can only be reached on
+    /// the web. Opened by the Home "Speciale Festival" card in an in-app WebView.
+    ///
+    /// Festival page on the public website (rich web content: post-event videos + extra
+    /// material, not in the `sync-editorial` payload). Opened by the Home "Speciale
+    /// Festival" card in the **external browser** (SwiftUI `openURL`) — no in-app WebView
+    /// for this destination. Single source of truth for that card; update here if the CMS
+    /// route changes.
+    static let festivalURL = publicWebsiteURL
+        .appendingPathComponent("progetti")
+        .appendingPathComponent("festival-umano-tutto-intero")
+
     /// Canonical share URLs: https://www.suitetti.org/{articoli|eventi|documenti}/{slug}
     static func articleShareURL(slug: String) -> URL {
         publicWebsiteURL.appendingPathComponent("articoli").appendingPathComponent(slug)

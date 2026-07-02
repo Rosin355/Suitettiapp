@@ -9,10 +9,13 @@ private struct StatItem {
 /// Avoids blur materials — uses a transparent dark gradient overlay
 /// on top of the mesh gradient background for zero extra compositing cost.
 struct HeroStatsView: View {
+    // Evergreen civic stats — no date-bound values so the hero never goes stale.
+    // Time-sensitive promos (e.g. a festival) live in the dedicated Home promo card,
+    // not here.
     private let stats: [StatItem] = [
-        StatItem(value: "100+",  label: "Associazioni"),
-        StatItem(value: "312",   label: "Comitati"),
-        StatItem(value: "16 giu", label: "3° Festival"),
+        StatItem(value: "100+",    label: "Associazioni"),
+        StatItem(value: "312",     label: "Comitati"),
+        StatItem(value: "Italia",  label: "Rete civica"),
     ]
 
     var body: some View {
@@ -49,7 +52,8 @@ struct HeroStatsView: View {
                 .kerning(-0.5)
             Text(stat.label)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white.opacity(0.56))
+                // 0.72 (was 0.56) lifts small-label contrast on brand red toward WCAG AA
+                .foregroundStyle(.white.opacity(0.72))
                 .kerning(0.2)
         }
         .frame(maxWidth: .infinity)

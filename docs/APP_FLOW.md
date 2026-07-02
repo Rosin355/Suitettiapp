@@ -167,17 +167,17 @@ Each tab declares an `isPresented`-style `navigationDestination` so a resolved d
 **Sections (top to bottom)**:
 1. **Hero** (`HomeHeroSection`) — animated brand lockup ("Ditelo sui Tetti"), full width.
 2. **Ticker** (`HeroTickerView`) — full-width scrolling ticker.
-3. **Stats strip** (`HomeStatsStrip`, on `.thinMaterial`): three stats — `100+ Associazioni`, `312 Comitati`, `16 giu · 3° Festival`. (Note: these are static values in code.)
+3. **Stats strip** (`HeroStatsView`, part of `HomeHeroSection`, on a transparent dark gradient over the mesh — no blur): three **evergreen** static stats — `100+ Associazioni`, `312 Comitati`, `Italia · Rete civica`. (The separate `HomeStatsStrip` and its date-bound `16 giu · 3° Festival` stat were removed 2026-07-02 so the hero never goes stale.)
 4. **In evidenza** (`HomeFeaturedArticlesSection`) — section header "In evidenza" with "Vedi tutti" action (switches to `.articoli` tab). Shows the **first 6** articles. iPhone = vertical card list (`ArticleListRow`); iPad = 2-column grid. Each card → `ArticleDetailView` via `NavigationLink` with `.navigationTransition(.zoom)`.
 5. **Prossimi eventi** (`HomeEventsSection`) — header "Prossimi eventi" with "Tutti →" → `EventiView`. Shows first 3 upcoming events as `EventRow`s; each → `EventDetailView`. Empty copy: "Nessun evento in programma."
-6. **Quote card** + **Referendum/Festival CTA card** (static promotional cards).
+6. **Quote card** + **Festival spotlight** (`HomePromoCard`, "SPECIALE · 3° Festival — rivivi video e materiali"): tapping opens `AppEnvironment.festivalURL` in the **external browser** (SwiftUI `openURL`) — the festival page is rich web content (videos, gallery, downloads) that is not in the sync payload.
 7. Bottom clearance spacer (~130 pt) so content clears the floating tab bar.
 
 On iPad, editorial content is clamped to `readableMaxWidth` (820) and centred; hero + ticker stay full width.
 
 **States**: Home reads the shared stores. Sections render only when their store has data; events section shows its own empty copy. There is no full-screen loading/error here — the stores' loading/error/offline surfaces primarily on Articoli/Documenti. Treat Home sections as "show when populated".
 
-**Navigation edges**: "Vedi tutti" → Articoli tab; featured article → Article detail; "Tutti →" → Events list; event row → Event detail.
+**Navigation edges**: "Vedi tutti" → Articoli tab; featured article → Article detail; "Tutti →" → Events list; event row → Event detail; Festival spotlight → opens the festival page in the external browser (leaves the app).
 
 ---
 
@@ -509,3 +509,11 @@ Detail screens (article/event/document) are content-only because the entity is a
 - **Home**: the black festival CTA (`HomeReferendumCTA`, "Scopri l'evento del 16 giugno") is **disabled in v1.0** — it navigated nowhere and duplicated "Prossimi eventi". The component remains as a future promotional-banner slot but is not rendered. "Prossimi eventi" is unchanged.
 - **Share** (article/event/document detail): the share button now produces an inviting message containing the **canonical** `https://www.suitetti.org/{articoli|eventi|documenti}/{slug}` URL + the store listing — not a bare/legacy URL. PDF "Leggi PDF" / "Apri esternamente" still use the real PDF URL.
 - **About → "Supporto tecnico"** (new card, before the developer section): taps open a `mailto:` to **info@digitalyogin.com** with a version/build-stamped subject; a fallback alert appears if no mail client is available.
+
+## Addendum — flow changes (2026-07-02)
+
+- **Home hero stats** are now evergreen (`Italia · Rete civica` replaces `16 giu · 3° Festival`); the dead `HomeStatsStrip` was deleted. `HeroStatsView` is the live strip inside `HomeHeroSection`.
+- **Home Festival spotlight**: a new `HomePromoCard` ("SPECIALE · 3° Festival — rivivi video e materiali") replaces the old, disabled `HomeReferendumCTA`. Tapping opens `AppEnvironment.festivalURL` in the **external browser** (SwiftUI `openURL`) — the festival page is rich web content that reads best full-screen in Safari. (An earlier iteration used an in-app `WebSheet`; those WebView components remain in the codebase but are no longer wired to this card.)
+  > Android: open externally with `Intent(Intent.ACTION_VIEW, uri)` (default browser). The festival hub URL is a website destination, not part of the sync payload.
+- **Onboarding slide 2** is evergreen: badge `IL FESTIVAL`, title `SUI TETTI / FESTIVAL`, closing "Ci vediamo sui tetti. ♡" (was `3° FESTIVAL` / `FESTIVAL 2026` / "Ti aspettiamo. ♡").
+- A Festival remains a normal **event** (`tipo: "Festival"`) with the full native `EventDetailView`; a dedicated native `FestivalDetailView` (video + related articles, "Option B") is backend-gated — see `API_CONTRACT.md` → "Proposed: Festival / Project content".
