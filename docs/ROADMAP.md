@@ -38,6 +38,48 @@ Tasks are tracked here as the single source of truth across AI sessions.
 
 ---
 
+## Post-1.0.2 — Dynamic featured event (2026-08-12)
+
+Replaced the hardcoded Festival spotlight with a CMS-driven banner. Editors pick what is
+promoted; the app never needs a release to change it.
+
+- [x] **Backend audit** — no featured field existed anywhere for events (`events` table, the
+      `mobile_events_public` view, `sync-editorial`, or the live payload). The web home banner
+      is hardcoded too. The admin's "Evento in evidenza" toast was mislabeled copy on the
+      `is_mobile_visible` (sync-visibility) toggle — reusing that flag would have deleted
+      events from the apps.
+- [x] **Migration written** — `events.is_featured boolean NOT NULL DEFAULT false` + partial
+      index + the column appended to `mobile_events_public`. Additive and backward compatible;
+      `sync-editorial` needs no change because it spreads `select("*")` from the view.
+- [x] **Admin toggle** — exclusive "in evidenza" switch in `AdminEditorialEvents.tsx`
+      (featuring one event clears the previous), plus a fix for the mislabeled toast.
+- [x] **iOS pipeline** — `isFeatured` through `EventDTO` → `Event` → `EventMapper` →
+      `CachedEvent` → `EventStore`, defaulting to `false` at every hop.
+- [x] **`EventStore.featuredEvent`** — derived on every read, never persisted; deterministic
+      resolution + warning when several events are flagged.
+- [x] **`HomeFeaturedEventCard` + `HomeFeaturedEventSection`** — reusable card, whole-card tap
+      to the **native** `EventDetailView`, brand-artwork fallback, one merged VoiceOver
+      element, Dynamic Type via `@ScaledMetric`.
+- [x] **Old Festival CTA removed from Home** — `HomePromoCard` retained as a component but no
+      longer rendered.
+- [x] **Cache-signature fix** — `is_featured` now feeds `contentSignature`, so clearing the
+      flag rewrites the cache and the banner cannot reappear on next launch.
+- [x] **Crash-proofed the cache** — `EditorialCacheRepository` no longer force-tries its
+      `ModelContainer`; it rebuilds an unmigratable store and degrades gracefully.
+- [x] **QA** — 23/23 checks on a harness compiling the real sources (scenarios A–F, live
+      payload regression); runtime verified on simulator; banner verified visually on iPad.
+- [x] `** BUILD SUCCEEDED **` — iPhone 17 Pro + iPad Pro 13-inch (M5).
+
+**Blocked / follow-up**:
+- [ ] **Apply the migration to production.** The Supabase CLI account available locally has no
+      privileges on project `kbswgeliohnpwopzzzpc`, so it could not be applied from here. Until
+      it runs, `is_featured` is absent from the payload, every event decodes as `false`, and
+      the banner stays hidden — the app is shipping-safe in that state.
+- [ ] After applying, regenerate `src/integrations/supabase/types.ts` from the live schema
+      (the column was hand-added there to keep the web build type-checking).
+
+---
+
 ## Post-1.0.2 — Evergreen Home hero + Festival spotlight (2026-07-02)
 
 Website (`suitetti.org`) published post-festival videos + extra material. The app was made evergreen while surfacing the 3° Festival properly — **hybrid**: an in-app WebView spotlight card now, a native detail later (Option B, backend-gated).

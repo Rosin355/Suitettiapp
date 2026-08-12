@@ -16,6 +16,10 @@ struct Event: Identifiable {
     let rawDate: Date?      // parsed start date, used for calendar
     let updatedAt: Date?
     let syncVersion: Int
+    /// Promoted to the Home featured banner by the CMS (`events.is_featured`).
+    /// Defaults to false everywhere so a backend or cache without the field is
+    /// simply "nothing featured", never a crash and never a stale banner.
+    let isFeatured: Bool
     let relatedDocuments: [RelatedDocument]
 
     // Custom init required because relatedDocuments must default to [] while
@@ -36,6 +40,7 @@ struct Event: Identifiable {
         rawDate: Date?,
         updatedAt: Date?,
         syncVersion: Int,
+        isFeatured: Bool = false,
         relatedDocuments: [RelatedDocument] = []
     ) {
         self.id = id
@@ -53,6 +58,7 @@ struct Event: Identifiable {
         self.rawDate = rawDate
         self.updatedAt = updatedAt
         self.syncVersion = syncVersion
+        self.isFeatured = isFeatured
         self.relatedDocuments = relatedDocuments
     }
 

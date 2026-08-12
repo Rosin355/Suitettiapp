@@ -13,12 +13,17 @@ struct EventDTO: Decodable {
     let immagineUrl: String?
     let updatedAt: Date?
     let syncVersion: Int
+    /// Backend column `events.is_featured`, published by the `mobile_events_public`
+    /// view. Marks the single event the CMS promotes to the Home banner. Older
+    /// backends omit the key entirely, which decodes to `false` — an app talking to
+    /// a backend without the column simply renders no banner.
+    let isFeatured: Bool
     /// PDF/document attachments decoded from `attachments` or `allegati` array.
     let attachments: [RelatedDocument]
 
     private enum CodingKeys: String, CodingKey {
         case id, titolo, slug, tipo, dataEvento, ora, luogo, descrizione
-        case link, immagineUrl, updatedAt, syncVersion
+        case link, immagineUrl, updatedAt, syncVersion, isFeatured
         case attachments, allegati
     }
 
@@ -44,6 +49,10 @@ struct EventDTO: Decodable {
         link        = try? c.decodeIfPresent(String.self, forKey: .link)
         immagineUrl = try? c.decodeIfPresent(String.self, forKey: .immagineUrl)
         syncVersion = (try? c.decodeIfPresent(Int.self, forKey: .syncVersion)) ?? 0
+        // Same resilience rule as every other optional field: a missing key, an
+        // explicit null, or a wrong type all mean "not featured" rather than a
+        // decode failure that would drop the event from the app.
+        isFeatured  = (try? c.decodeIfPresent(Bool.self, forKey: .isFeatured)) ?? false
 
         updatedAt = try? c.decode(Date.self, forKey: .updatedAt)
         if updatedAt == nil {

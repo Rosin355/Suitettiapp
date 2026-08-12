@@ -369,6 +369,7 @@ fun CategoryChip(text: String, tint: Color = Brand.Red) {
 | `PDFKitView` / `PDFReaderView` | `PdfReader` (PdfRenderer) | WebView/Custom Tabs fallback; prefer `.pdf` URL |
 | `TabView` + `Tab` | `NavigationBar` + `NavHost` | floating translucent, 4 tabs, deep links |
 | `PressableCardStyle` | `clickable` + scale `0.98f` | gate on Reduce Motion |
+| `HomeFeaturedEventCard` | `HomeFeaturedEventCard` | backend-driven banner; render only when a featured event exists |
 
 ---
 
@@ -387,3 +388,53 @@ A Compose component reaches parity when: it matches the token values above; supp
 | **Promo banner** (`HomeReferendumCTA`) | dark gradient CTA card — **not rendered in v1.0** (kept for future) | optional future banner slot; do not render for v1.0. |
 
 **Share text rule**: never share a raw or legacy URL — always the inviting message with the canonical `https://www.suitetti.org/…` link and the store listing.
+
+---
+
+## Addendum — HomeFeaturedEventCard (2026-08-12)
+
+**File:** `Components/Cards/HomeFeaturedEventCard.swift`, hosted by
+`Screens/Home/HomeFeaturedEventSection.swift`.
+
+Replaces the hardcoded "3° Festival" `HomePromoCard` slot on Home. `HomePromoCard` itself
+remains in the codebase as a reusable component for future campaigns but is **no longer
+rendered**. Nothing about this card is bound to a specific event.
+
+**Visual spec**
+
+- Solid `white` surface on `brandCream`, corner `22` (`DT.cornerRadius`), hairline
+  `white @ 0.8` 0.5pt, `cardShadow()`. Deliberately solid, not glass: it carries body text.
+- Cover: `RemoteImageView` height `170`, clipped, with a bottom
+  `LinearGradient(clear → black 0.45)` at half the cover height so the pill stays legible.
+  A missing/failed image falls back to the official brand artwork via `RemoteImageView` —
+  no bespoke placeholder, no duplicated image loading.
+- Pill: `CategoryChip("EVENTO IN EVIDENZA")`, `brandBlack` on `brandYellow`, padding `12`.
+- Body padding `16`, spacing `12`: title (20 bold, kerning `-0.4`, max 3 lines) → meta rows
+  (`calendar` + date·time, `mappin.and.ellipse` + location; 14pt `brandGray`, `brandRed`
+  icons) → `Divider` (`brandSep`) → CTA row ("Scopri l'evento", 15 semibold `brandRed`) with
+  a `34×34` `brandRed` arrow tile, corner `11`.
+- Location row is omitted entirely when `location` is empty.
+
+**Behaviour**
+
+- The whole card is one `NavigationLink` → **native** `EventDetailView(event:)`. Never opens
+  the website. Same detail screen used by `HomeEventsSection` and `EventiView`.
+- Rendered only when `EventStore.featuredEvent != nil`; otherwise the section emits nothing —
+  no placeholder, no reserved space.
+- Home's "Prossimi eventi" preview filters the promoted event out so it never appears twice in
+  one screenful. The full events list still shows it.
+
+**Accessibility**
+
+- One merged element: label `"Evento in evidenza. {title}. {date}. {location}"`, hint
+  `"Apri i dettagli dell'evento"`, `isButton` trait. The cover is `accessibilityHidden`.
+- Tap target is the entire card, far above 44pt.
+- Dynamic Type via `@ScaledMetric` (title→`.title3`, meta/CTA→`.subheadline`, cover
+  height→`.body`), so text and cover grow together instead of the image swamping the text.
+- Reduce Motion: the card has no intrinsic animation; the section's `appearAnimation`
+  already no-ops under Reduce Motion, and `PressableCardStyle` gates its scale.
+
+**Compose parity:** `Card` + `Column`, Coil image with the same scrim and brand fallback,
+pill, meta `Row`s with icons, `HorizontalDivider`, CTA row; `Modifier.clickable` navigating to
+the existing event-detail destination; `semantics(mergeDescendants = true)` with the same
+contentDescription; `sp` text with `FontScale`; render nothing when the flag resolves to null.

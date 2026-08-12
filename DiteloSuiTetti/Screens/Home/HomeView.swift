@@ -4,7 +4,6 @@ struct HomeView: View {
     @Binding var selectedTab: AppTab
     @State private var scrolledPastHero = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ScrollView {
@@ -17,22 +16,13 @@ struct HomeView: View {
                 // Editorial content is constrained to a readable width on iPad
                 VStack(spacing: 0) {
                     HomeFeaturedArticlesSection(selectedTab: $selectedTab)
+                    // The single editorial spotlight on Home. Driven entirely by the
+                    // backend `is_featured` flag, so it promotes whatever the CMS marks
+                    // and vanishes when nothing is marked. Replaces the old hardcoded
+                    // Festival CTA, which could only ever point at one fixed event.
+                    HomeFeaturedEventSection()
                     HomeEventsSection()
                     HomeQuoteSection()
-                    // Time-bound spotlight — opens the Festival page (rich web content:
-                    // videos + extra material, not in the sync payload) in the external
-                    // browser via SwiftUI openURL. Copy + destination URL are the only
-                    // festival-specific values; swap them (and AppEnvironment.festivalURL)
-                    // for a future promo.
-                    HomePromoCard(
-                        eyebrow: "SPECIALE",
-                        title: "3° Festival — rivivi video e materiali",
-                        accessibilityHintText: "Apre la pagina del Festival sul sito web"
-                    ) {
-                        openURL(AppEnvironment.festivalURL)
-                    }
-                    .padding(.horizontal, DT.padding)
-                    .padding(.bottom, 8)
                     // Ensures last card scrolls fully above the floating glass tab bar
                     Color.clear.frame(height: 130)
                 }

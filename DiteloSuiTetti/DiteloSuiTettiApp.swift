@@ -119,6 +119,8 @@ struct DiteloSuiTettiApp: App {
 
         if let cached {
             replaceStores(with: cached)
+            // The banner can render from cache before the network answers (offline launch).
+            NSLog("[FeaturedEvent] restored from cache: %@", eventStore.featuredEvent?.title ?? "nil")
         } else {
             store.beginLoading()
             eventStore.beginLoading()
@@ -158,7 +160,18 @@ struct DiteloSuiTettiApp: App {
     private func performEditorialSync(previous: EditorialSyncPayload?, hasCachedContent: Bool, force: Bool) async {
         do {
             let payload = try await coordinator.syncAll()
+
+            // Featured-event reconciliation trace. `cached` is what the banner was showing
+            // (restored cache or the previous sync), `remote` is what the backend just
+            // said. They differ exactly when an editor changed the flag — and because the
+            // store is replaced wholesale, `final` always follows `remote`, including when
+            // remote is nil and the banner has to disappear.
+            let cachedFeatured = eventStore.featuredEvent?.title
+            let remoteFeatured = EventStore.resolveFeatured(from: payload.events)?.title
             replaceStores(with: payload)
+            NSLog("[FeaturedEvent] cached=%@", cachedFeatured ?? "nil")
+            NSLog("[FeaturedEvent] remote=%@", remoteFeatured ?? "nil")
+            NSLog("[FeaturedEvent] final=%@", eventStore.featuredEvent?.title ?? "nil")
 
             // Recovery net: the store MUST contain every article the payload returned.
             // If any are missing (should never happen now that ArticleDTO decodes

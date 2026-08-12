@@ -75,9 +75,39 @@ Attachments arrive under `attachments` or `allegati`. Events are the most defens
 | `immagine_url` | `String?` | Yes | `String?` | Null → brand-logo fallback. |
 | `updated_at` | `Date?` | Yes | `Instant?` | |
 | `sync_version` | `Int` | No (defaults `0`) | `Int?` | Tolerates null/missing. |
+| `is_featured` | `Bool` | No (defaults `false`) | `Boolean` | **Home featured banner.** Missing key, null, or wrong type all decode to `false`. |
 | `attachments` / `allegati` | `[RelatedDocument]` | array (defaults `[]`) | `List<AttachmentDto>` | Per-item lossy. |
 
 Resilient-decode rule (verbatim intent): a malformed event must never drop from the list unless its identity (`id`) or `titolo` is missing. Every other field tolerates null/missing/wrong-type by falling back to a safe default. `data_evento` is kept as the **raw string** in the DTO and parsed when building the UI `Event`; an empty `data_evento` becomes an "undated" event rather than being discarded.
+
+### 3.1 `is_featured` — the dynamic Home banner
+
+Added 2026-08-12. Backed by the `events.is_featured` column and exposed through the
+`mobile_events_public` view. It is the **single source of truth** for the featured-event
+banner on the mobile home:
+
+```
+CMS "in evidenza" toggle → events.is_featured → mobile_events_public
+    → sync-editorial → isFeatured → Home featured-event card → native Event Detail
+```
+
+Rules that both platforms must follow:
+
+- The banner is **derived**, never stored. Resolve it from the current event list on every
+  read; do not persist a separate "featured banner" record or a flag in
+  DataStore/UserDefaults. Clearing the flag backend-side must make the banner vanish after
+  the next successful sync, with no client-side business logic deciding otherwise.
+- The flag is **independent of the date**. A featured past event still shows; the backend
+  decides what is promoted, not the client.
+- Do **not** confuse this with `is_mobile_visible`, which decides whether an event is
+  delivered to the apps at all. They are different columns with different meanings.
+- If more than one event is flagged (possible only via direct DB edits — the admin toggle
+  is exclusive), pick a deterministic winner and log a warning rather than crashing or
+  flickering. Order: upcoming first → nearest event date → newest `updated_at` → lowest
+  `id`. The final `id` tiebreak is what guarantees the same winner across launches.
+- `is_featured` must participate in the **cache-invalidation signature**. Toggling it often
+  changes nothing else about the event, so a signature built only from text would keep a
+  stale `is_featured = true` row and flash the banner on next launch.
 
 ---
 
@@ -158,7 +188,7 @@ Key derived/added fields:
 
 `Article` (UI model) fields: `id`, `slug`, `category`, `categoryColor`*, `thumbnailColors`*, `title`, `date`*, `fullDate`*, `publishedAt`, `readTime`*, `excerpt`, `body`, `imageURL`, `relatedDocuments`. (* = derived/display-only.)
 
-`Event` (UI model) fields: `id`, `title`, `slug`, `type`, `day`*, `monthShort`*, `fullDate`*, `time`, `location`, `description`, `link`, `imageURL`, `rawDate`, `updatedAt`, `syncVersion`, `relatedDocuments`.
+`Event` (UI model) fields: `id`, `title`, `slug`, `type`, `day`*, `monthShort`*, `fullDate`*, `time`, `location`, `description`, `link`, `imageURL`, `rawDate`, `updatedAt`, `syncVersion`, `isFeatured`, `relatedDocuments`.
 
 `Document` (UI model) fields: `id`, `title`, `slug`, `type`, `category`, `description`, `url`, `uploadedAt`*, `publishedAt`, `updatedAt`, `syncVersion`.
 
@@ -295,6 +325,12 @@ Notes:
 
 The iOS app caches via SwiftData (`CachedArticle`, `CachedEvent`, `CachedDocument`) with `id` as the unique key, stores URLs as strings, and serializes `relatedDocuments` to a JSON string. Cache schema version is **2**; bumping the version triggers a one-time stale-cache purge. Mirror this on Android with Room + a version constant in DataStore.
 
+`CachedEvent.isFeatured` (2026-08-12) was added **without** a version bump: it carries a
+default value, so SwiftData migrates existing stores automatically and users keep their
+offline content. Old rows read back as `false`, which is the correct pre-sync state. On
+Android, do the same with a Room migration that adds the column `NOT NULL DEFAULT 0`
+rather than a destructive migration.
+
 ```kotlin
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -334,6 +370,7 @@ data class CachedEventEntity(
     val rawDate: Long?,                     // epoch millis of parsed start date
     val updatedAt: Long?,
     val syncVersion: Int,
+    val isFeatured: Boolean = false,        // Home featured banner; default keeps old rows migratable
     val relatedDocumentsJson: String?,
 )
 

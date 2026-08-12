@@ -602,3 +602,68 @@ The website published post-festival videos + extra material. The app was made ev
 **Onboarding slide 2** is evergreen: `IL FESTIVAL` / `SUI TETTI / FESTIVAL` / "Ci vediamo sui tetti." (dropped `3°`, `2026`, and the future-tense "Ti aspettiamo").
 
 **Option B (native Festival/Project detail) is backend-gated.** A festival is already a normal event (`tipo: "Festival"`) with the full native event detail (cover, description, external link, PDF attachments). A dedicated native detail with a **video player** + **related articles** needs new API fields (`video_url` or typed `video` attachments; `related_article_ids` or a shared `project_id`) — see `API_CONTRACT.md` → "Proposed: Festival / Project content". Build the same on Android once those fields ship.
+
+---
+
+## Dynamic featured event (2026-08-12) — required parity
+
+The Home spotlight is no longer a hardcoded Festival card. It is now driven end-to-end by a
+backend flag, and Compose must implement the same behaviour.
+
+```
+CMS "in evidenza" toggle
+        ↓
+events.is_featured            (boolean NOT NULL DEFAULT false)
+        ↓
+mobile_events_public          (view; column appended last)
+        ↓
+sync-editorial                (select("*") — no function change needed)
+        ↓
+isFeatured                    (EventDto → Event → CachedEventEntity)
+        ↓
+Home featured-event card      (rendered only when non-null)
+        ↓
+native Event Detail           (existing route — never a browser)
+```
+
+### Rules
+
+1. **Derive, never store.** Compute the featured event from the current event list on every
+   read (`events.firstOrNull { it.isFeatured }` plus the tiebreak below). Do **not** persist a
+   "featured banner" record, a DataStore key, or a remembered event id. This is what makes the
+   banner disappear on its own when an editor clears the flag.
+2. **No local business logic.** Do not pick the banner by date window, `tipo == "Festival"`,
+   slug matching, or "most recent event". The backend decides; the client renders. A featured
+   past event still shows.
+3. **Render nothing when null.** No placeholder, no empty card, no reserved vertical space.
+4. **Deterministic winner if several are flagged.** Only reachable through direct DB edits (the
+   admin toggle is exclusive), but handle it: upcoming first → nearest event date → newest
+   `updated_at` → lowest `id`; log a warning; never crash and never flicker between candidates.
+5. **Cache invalidation must include the flag.** Whatever signature/hash decides to rewrite the
+   Room cache must incorporate `isFeatured`. Clearing the flag frequently changes nothing else
+   about the event, so a text-only signature keeps a stale `true` and flashes the banner on the
+   next cold start.
+6. **Room migration is additive.** `ALTER TABLE cached_events ADD COLUMN isFeatured INTEGER NOT
+   NULL DEFAULT 0` — a real migration, not `fallbackToDestructiveMigration()`, so users keep
+   offline content. Old rows read `false`, the correct pre-sync state.
+7. **Decode defensively.** Missing key, `null`, or a wrong type must all yield `false` and must
+   never drop the event from the list (same rule as every other optional event field).
+8. **Do not touch `is_mobile_visible`.** It is a different column that gates whether an event
+   reaches the apps at all. Turning it off removes the event entirely — it is not a highlight.
+9. **De-duplicate on Home only.** Filter the promoted event out of the "Prossimi eventi"
+   preview; if it was the only upcoming event, hide that section instead of showing "Nessun
+   evento in programma" under a banner advertising one. The full events list keeps it.
+
+### Diagnostics to mirror
+
+```
+[FeaturedEvent] cached=<title or nil>
+[FeaturedEvent] remote=<title or nil>
+[FeaturedEvent] final=<title or nil>
+```
+
+Log these around the point where the store is replaced after a successful sync — they are what
+makes a "the banner won't go away" report diagnosable in one line.
+
+See `UI_COMPONENTS.md` → "Addendum — HomeFeaturedEventCard" for the visual spec and the
+accessibility contract.

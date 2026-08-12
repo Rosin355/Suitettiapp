@@ -164,7 +164,10 @@ Il problema è che questa riforma, vent'anni dopo, è ancora in larga parte inat
             imageURL: nil,
             rawDate: Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 22, hour: 9)),
             updatedAt: nil,
-            syncVersion: 1
+            syncVersion: 1,
+            // Drives the Home featured-event banner in App Store screenshots, and makes
+            // `--screenshots` a runnable check of the banner without a live backend.
+            isFeatured: true
         ),
     ]
 

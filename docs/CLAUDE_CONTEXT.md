@@ -145,6 +145,27 @@ Articles and events both support `relatedDocuments: [RelatedDocument]`.
 
 ---
 
+## Featured event banner (Home)
+
+`HomeFeaturedEventSection` reads `EventStore.featuredEvent` and renders
+`HomeFeaturedEventCard`, or nothing at all. Replaced the hardcoded "3° Festival"
+`HomePromoCard` on 2026-08-12 (that component is retained but no longer rendered).
+
+Non-negotiables when touching this area:
+
+- The banner is **derived** from `EventStore.events` on every read. Never persist it, never
+  add a UserDefaults key for it, never hardcode an event. That is what makes it disappear by
+  itself when an editor clears the flag.
+- Tapping opens the **native** `EventDetailView` — not the website, and not a second detail
+  screen.
+- `is_featured` must stay part of `EditorialCachePolicy.contentSignature`, otherwise clearing
+  the flag leaves a stale cached `true` that flashes the banner on the next launch.
+- When several events are flagged, `EventStore.resolveFeatured(from:)` picks deterministically
+  (upcoming → nearest date → newest `updatedAt` → id) and logs a warning. Do not "fix" this by
+  crashing or by picking the first element.
+
+---
+
 ## Hero section (Home)
 
 `HomeHeroSection` → `HeroBackgroundView` (animated `MeshGradient`) + `HeroBrandView` + `HeroStatsView`.
@@ -168,6 +189,12 @@ Screen height tiers:
 - **Delta sync**: append `?since=<ISO8601_date>`
 - Public, no auth required
 - Returns `server_time`, `articles[]` (with `attachments: []`), `events[]` (with `attachments: []`), `documents[]`
+- **`events[].is_featured`** (boolean, default `false`) — drives the Home featured-event banner.
+  Source of truth is the `events.is_featured` column, surfaced via the `mobile_events_public`
+  view; `sync-editorial` publishes it automatically because it spreads `select("*")`.
+  Not to be confused with `is_mobile_visible`, which gates whether an event syncs at all.
+  ⚠️ The migration adding this column is written but **not yet applied to production** — see
+  `ROADMAP.md` → "Post-1.0.2 — Dynamic featured event".
 - **Push token registration**: `POST /functions/v1/register-push-token`
 - **Send push**: `POST /functions/v1/send-apns-push` (deployed, production APNs)
 - **Notify on publish**: `notify-content-published` Edge Function (deployed)

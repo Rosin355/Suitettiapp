@@ -83,5 +83,11 @@ struct EditorialSyncCoordinator {
             NSLog("[SyncDiag] event[%d]: '%@' rawDate=%@ upcoming=%@",
                   i, e.title, stamp(e.rawDate), e.isUpcoming ? "yes" : "no")
         }
+        // Confirms whether the backend is publishing the featured flag at all: a payload
+        // from a backend without the column always reports 0 here.
+        let flagged = events.filter(\.isFeatured)
+        NSLog("[SyncDiag] events flagged featured: %d%@",
+              flagged.count,
+              flagged.isEmpty ? "" : " — \(flagged.map(\.title).joined(separator: " | "))")
     }
 }

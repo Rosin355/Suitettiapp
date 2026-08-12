@@ -28,7 +28,11 @@ extension EditorialSyncPayload {
             sha.update(data: Data([0]))  // delimiter so "ab"+"c" ≠ "a"+"bc"
         }
         for a in articles  { feed(a.id.uuidString); feed(a.title); feed(a.excerpt); feed(a.body) }
-        for e in events    { feed(e.id.uuidString); feed(e.title); feed(e.description) }
+        // `isFeatured` participates in the signature even though it is not text: clearing
+        // the flag often changes nothing else about the event, and without it the cache
+        // would keep a stale `isFeatured = true` row and flash the banner on next launch
+        // until the sync completed.
+        for e in events    { feed(e.id.uuidString); feed(e.title); feed(e.description); feed(e.isFeatured ? "F1" : "F0") }
         for d in documents { feed(d.id.uuidString); feed(d.title); feed(d.description) }
         return sha.finalize().map { String(format: "%02x", $0) }.joined()
     }

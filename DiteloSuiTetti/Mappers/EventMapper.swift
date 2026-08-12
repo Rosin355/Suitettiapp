@@ -30,6 +30,7 @@ extension EventDTO {
             rawDate:          rawDate,
             updatedAt:        updatedAt,
             syncVersion:      syncVersion,
+            isFeatured:       isFeatured,
             relatedDocuments: attachments
         )
     }

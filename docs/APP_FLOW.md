@@ -33,6 +33,20 @@ When `ContentView` appears it runs `loadContent()`:
 5. After detecting new items vs. previous cache, schedule local notifications.
 6. Set `router.contentDidLoad = true` so any pending deep link can resolve.
 
+**Featured-event banner across this flow.** The banner is derived from the current event list
+on every read, so it follows the same cache-first path with no extra state:
+
+```
+launch → restore cached events → banner shows if a cached event is featured
+       → live sync → stores replaced wholesale → banner reflects the backend
+```
+
+Because step 3 replaces store contents on **every** successful sync (not only when the cache
+is rewritten), clearing the flag backend-side removes the banner as soon as that sync lands.
+`is_featured` is also part of the cache-invalidation signature, so the persisted cache is
+rewritten too and the banner cannot reappear on the next launch. Diagnostics for this are
+logged as `[FeaturedEvent] cached=… / remote=… / final=…`.
+
 ---
 
 ## 2. Text flow diagram
@@ -169,15 +183,16 @@ Each tab declares an `isPresented`-style `navigationDestination` so a resolved d
 2. **Ticker** (`HeroTickerView`) — full-width scrolling ticker.
 3. **Stats strip** (`HeroStatsView`, part of `HomeHeroSection`, on a transparent dark gradient over the mesh — no blur): three **evergreen** static stats — `100+ Associazioni`, `312 Comitati`, `Italia · Rete civica`. (The separate `HomeStatsStrip` and its date-bound `16 giu · 3° Festival` stat were removed 2026-07-02 so the hero never goes stale.)
 4. **In evidenza** (`HomeFeaturedArticlesSection`) — section header "In evidenza" with "Vedi tutti" action (switches to `.articoli` tab). Shows the **first 6** articles. iPhone = vertical card list (`ArticleListRow`); iPad = 2-column grid. Each card → `ArticleDetailView` via `NavigationLink` with `.navigationTransition(.zoom)`.
-5. **Prossimi eventi** (`HomeEventsSection`) — header "Prossimi eventi" with "Tutti →" → `EventiView`. Shows first 3 upcoming events as `EventRow`s; each → `EventDetailView`. Empty copy: "Nessun evento in programma."
-6. **Quote card** + **Festival spotlight** (`HomePromoCard`, "SPECIALE · 3° Festival — rivivi video e materiali"): tapping opens `AppEnvironment.festivalURL` in the **external browser** (SwiftUI `openURL`) — the festival page is rich web content (videos, gallery, downloads) that is not in the sync payload.
-7. Bottom clearance spacer (~130 pt) so content clears the floating tab bar.
+5. **Evento in evidenza** (`HomeFeaturedEventSection` → `HomeFeaturedEventCard`) — the single editorial spotlight, driven entirely by the backend `is_featured` flag. Renders **only** when `EventStore.featuredEvent != nil`; otherwise the section emits nothing at all (no placeholder, no reserved space). Tapping pushes the native `EventDetailView`. Replaced the hardcoded Festival CTA on 2026-08-12.
+6. **Prossimi eventi** (`HomeEventsSection`) — header "Prossimi eventi" with "Tutti →" → `EventiView`. Shows first 3 upcoming events as `EventRow`s; each → `EventDetailView`. Empty copy: "Nessun evento in programma." The promoted event is filtered out of this preview so it never appears twice on one screen; if it was the *only* upcoming event, the whole section stands down rather than contradicting the banner with "Nessun evento in programma". `EventiView` still lists it.
+7. **Quote card**.
+8. Bottom clearance spacer (~130 pt) so content clears the floating tab bar.
 
 On iPad, editorial content is clamped to `readableMaxWidth` (820) and centred; hero + ticker stay full width.
 
 **States**: Home reads the shared stores. Sections render only when their store has data; events section shows its own empty copy. There is no full-screen loading/error here — the stores' loading/error/offline surfaces primarily on Articoli/Documenti. Treat Home sections as "show when populated".
 
-**Navigation edges**: "Vedi tutti" → Articoli tab; featured article → Article detail; "Tutti →" → Events list; event row → Event detail; Festival spotlight → opens the festival page in the external browser (leaves the app).
+**Navigation edges**: "Vedi tutti" → Articoli tab; featured article → Article detail; "Tutti →" → Events list; event row → Event detail; **featured-event banner → Event detail (native, in-app — never the website)**.
 
 ---
 
@@ -517,3 +532,25 @@ Detail screens (article/event/document) are content-only because the entity is a
   > Android: open externally with `Intent(Intent.ACTION_VIEW, uri)` (default browser). The festival hub URL is a website destination, not part of the sync payload.
 - **Onboarding slide 2** is evergreen: badge `IL FESTIVAL`, title `SUI TETTI / FESTIVAL`, closing "Ci vediamo sui tetti. ♡" (was `3° FESTIVAL` / `FESTIVAL 2026` / "Ti aspettiamo. ♡").
 - A Festival remains a normal **event** (`tipo: "Festival"`) with the full native `EventDetailView`; a dedicated native `FestivalDetailView` (video + related articles, "Option B") is backend-gated — see `API_CONTRACT.md` → "Proposed: Festival / Project content".
+
+---
+
+## Addendum — dynamic featured event (2026-08-12)
+
+- **Home Festival spotlight removed.** The hardcoded `HomePromoCard` ("SPECIALE · 3° Festival")
+  is no longer rendered. It could only ever point at one fixed event and had to be edited in
+  code whenever the campaign changed. `HomePromoCard` stays in the codebase as a reusable
+  component for future campaigns.
+- **Replaced by `HomeFeaturedEventCard`**, driven by the backend `events.is_featured` flag.
+  An editor toggles "in evidenza" in the CMS; the banner appears on the next sync. Clearing it
+  removes the banner. No app release is involved in either direction.
+- The banner opens the **native** `EventDetailView` — not the website. This is a change of kind
+  from the old card, which left the app for the festival web page.
+- Placement: after "In evidenza", immediately before "Prossimi eventi".
+- Nothing about the banner is persisted separately. It is recomputed from `EventStore.events`,
+  which is what makes disappearance automatic.
+
+> Android: mirror exactly. Derive the banner from the same `is_featured` field, render nothing
+> when no event is flagged, and navigate to the existing event-detail route. Do not implement
+> local business logic (date windows, "latest festival", hardcoded slugs) to decide what to
+> promote — the backend is the only source of truth.

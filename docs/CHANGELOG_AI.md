@@ -4,6 +4,84 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-08-12 — Dynamic featured-event banner (replaces the hardcoded Festival card)
+
+**Change**: the Home spotlight is now driven by a backend flag instead of being hardcoded to
+the 3° Festival. An editor toggles "in evidenza" in the CMS and the banner appears on the next
+sync; clearing it makes the banner disappear. No app release involved either way.
+
+### Audit finding (the task's premise was wrong)
+
+The request assumed the web already had this behaviour and that the backend already exposed a
+featured field. Neither was true:
+
+- `events` had **no** featured column — only `is_mobile_visible`, `status`, `deleted_at`.
+  `is_featured` existed on `documents`, `partners` and `ditelo_press_articles`, but not events.
+- `mobile_events_public`, `sync-editorial`, and the live payload (63 events) exposed nothing.
+- The web home renders a **hardcoded** `FestivalPromoBanner` + `FestivalThankYouSection`;
+  "Prossimi Eventi" is just `events.slice(0, 3)`.
+- `AdminEditorialEvents.tsx` showed a toast reading *"Evento in evidenza"* on a mutation that
+  actually writes **`is_mobile_visible`** — a copy bug. Reusing that flag as "featured" would
+  have made un-featuring an event delete it from the apps; all 63 synced events have it `true`.
+
+So the flag had to be created. Named `is_featured` to match the convention already used by the
+sibling tables in the same database.
+
+### Backend (in the `ditelo-on-air` repo — **migration not yet applied**)
+
+- `supabase/migrations/20260812120000_add_events_is_featured.sql` — adds
+  `events.is_featured boolean NOT NULL DEFAULT false`, a partial index, and appends the column
+  to `mobile_events_public`. Additive only: no existing column, filter or ordering changes.
+- **No Edge Function change was needed.** `sync-editorial` reads the view with `select("*")`
+  and spreads every column into the JSON, so the field publishes itself once the view has it.
+- The existing `trg_editorial_sync` trigger bumps `updated_at`/`sync_version` on update, so
+  toggling the flag propagates through delta sync for free.
+- `AdminEditorialEvents.tsx` — new exclusive "in evidenza" toggle (featuring an event clears
+  the previous one in the same mutation), plus a fix for the mislabeled visibility toast.
+
+### iOS
+
+- `EventDTO` / `Event` / `EventMapper` / `CachedEvent` — `isFeatured` propagated end to end,
+  defaulting to `false` at every hop. Missing key, null, or wrong type never drops the event.
+- `EventStore.featuredEvent` — derived on every read, never stored. `resolveFeatured(from:)`
+  is static so the sync layer can resolve the incoming payload for diagnostics. Multiple
+  flagged events resolve deterministically (upcoming → nearest date → newest `updatedAt` → id)
+  with an `NSLog` warning; verified stable across 200 shuffled orderings.
+- `HomeFeaturedEventCard` (new) + `HomeFeaturedEventSection` (new) — brand card with cover,
+  "EVENTO IN EVIDENZA" pill, title, date, location and CTA. Whole card is one `NavigationLink`
+  to the **native** `EventDetailView`. Reuses `RemoteImageView` (brand-artwork fallback),
+  `CategoryChip` and the design tokens; no duplicated image loading.
+- `HomeView` — the hardcoded `HomePromoCard` Festival CTA is no longer rendered (the component
+  stays for future campaigns). Banner sits between "In evidenza" and "Prossimi eventi".
+- `HomeEventsSection` — filters the promoted event out of the Home preview, and stands the
+  whole section down if that was the only upcoming event rather than contradicting the banner.
+
+### Two latent bugs fixed along the way
+
+- **`EditorialCachePolicy.contentSignature`** hashed only event id/title/description. Toggling
+  `is_featured` usually changes nothing else, so the persisted cache would have kept a stale
+  `isFeatured = true` and flashed the banner on next launch. The flag now feeds the signature.
+- **`EditorialCacheRepository`** opened its `ModelContainer` with `try!` — a schema change
+  would have crashed on launch rather than migrating. It now opens defensively, rebuilds the
+  store if it cannot be migrated, and degrades to no-persistent-cache instead of crashing.
+  (`CachedEvent.isFeatured` carries a default, so this is a lightweight migration and the
+  cache schema version was deliberately **not** bumped — users keep their offline content.)
+
+### QA
+
+A harness compiling the real `Event` / `EventDTO` / `EventStore` / `EditorialCachePolicy`
+sources drives scenarios A–F: **23/23 checks pass**, including all 63 live events still
+decoding and the live payload correctly resolving to "no banner". Runtime on simulator against
+the live backend: `sync OK — articles: 301, events: 63, documents: 27`,
+`[SyncDiag] events flagged featured: 0`, `[FeaturedEvent] cached=nil / remote=nil / final=nil`.
+Banner rendering, brand fallback, placement and Home de-duplication verified visually on iPad
+via `--screenshots`.
+
+### Build
+`** BUILD SUCCEEDED **` — iPhone 17 Pro and iPad Pro 13-inch (M5) simulators. No new warnings.
+
+---
+
 ## 2026-07-02 — Festival card opens the page in the browser (supersedes the in-app WebView)
 
 **Change**: The Home "Speciale 3° Festival" card now opens the Festival page **externally in Safari** instead of presenting an in-app WebView sheet — the festival page is rich web content (videos "Il Salotto", photo gallery, program/press downloads) that reads best full-screen in the browser.

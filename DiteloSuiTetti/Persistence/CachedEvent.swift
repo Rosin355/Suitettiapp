@@ -18,6 +18,11 @@ final class CachedEvent {
     var rawDate: Date?
     var updatedAt: Date?
     var syncVersion: Int
+    /// Mirrors `Event.isFeatured`. The default value is what makes this a
+    /// lightweight (automatic) SwiftData migration: rows persisted by an older
+    /// build simply materialise as `false`, so an existing cache opens without
+    /// a schema bump and without losing the user's offline content.
+    var isFeatured: Bool = false
     var relatedDocumentsJSON: String?
 
     init(from event: Event) {
@@ -36,6 +41,7 @@ final class CachedEvent {
         rawDate          = event.rawDate
         updatedAt        = event.updatedAt
         syncVersion      = event.syncVersion
+        isFeatured       = event.isFeatured
         relatedDocumentsJSON = event.relatedDocuments.isEmpty ? nil :
             (try? JSONEncoder().encode(event.relatedDocuments)).flatMap { String(data: $0, encoding: .utf8) }
     }
@@ -60,6 +66,7 @@ final class CachedEvent {
             rawDate:          rawDate,
             updatedAt:        updatedAt,
             syncVersion:      syncVersion,
+            isFeatured:       isFeatured,
             relatedDocuments: relatedDocuments
         )
     }

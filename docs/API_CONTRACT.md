@@ -170,13 +170,37 @@ If the `attachments` array fails to decode entirely, treat it as empty — never
 | `attachments` | array | No | Optional array of `AttachmentDTO` objects; same schema as Article attachments |
 | `updated_at` | ISO 8601 string | Soft | Nullable |
 | `sync_version` | integer | Yes | Monotonically increasing |
+| `is_featured` | boolean | Soft | **Home featured banner.** Default `false` when missing/null/wrong-type. Added 2026-08-12 |
+
+**Featured event (`is_featured`)**
+
+Backed by `events.is_featured` (`boolean NOT NULL DEFAULT false`) and published through the
+`mobile_events_public` view. Because `sync-editorial` reads that view with `select("*")` and
+spreads every column into the JSON, exposing the field required **no Edge Function change** —
+only the migration that adds the column and appends it to the view.
+
+```
+CMS "in evidenza" toggle → events.is_featured → mobile_events_public
+    → sync-editorial → isFeatured → Home featured-event card → native Event Detail
+```
+
+- **Not** the same as `is_mobile_visible`. That column gates whether an event is delivered to
+  the apps at all; turning it off removes the event entirely. `is_featured` only promotes an
+  already-visible event to the home banner. (The admin's mobile-visibility toast previously
+  read "Evento in evidenza", which described the wrong flag; corrected 2026-08-12.)
+- Toggling it bumps `updated_at` and `sync_version` via the existing `trg_editorial_sync`
+  trigger, so delta sync picks the change up with no extra work.
+- The admin toggle is **exclusive**: featuring an event clears the previous one in the same
+  mutation, so at most one event is flagged at a time.
+- Clients must treat this as the only source of truth for the banner: no hardcoded events, no
+  locally persisted banner state. When no event is flagged, no banner renders.
 
 **Event date parsing**:
 - `data_evento` is `"YYYY-MM-DD"` — parse it with a date-only formatter (`yyyy-MM-dd`, UTC timezone).
 - `ora` is `"HH:mm"` **or null**. When present, combine with the date for a full datetime; when null/empty, use the date alone (midnight). Use this for calendar intent and the `isUpcoming` / `isPast` classification.
 - If `data_evento` cannot be parsed, treat the event as undated (`rawDate = null`). Display the raw string as a fallback.
 
-**Event decode resilience (mandatory)**: Only `id` and `titolo` are hard-required. `slug`, `tipo`, `data_evento`, `ora`, `luogo`, `descrizione`, and `sync_version` must all tolerate null/missing/wrong-type with safe defaults — a single malformed field must never drop the event from the list.
+**Event decode resilience (mandatory)**: Only `id` and `titolo` are hard-required. `slug`, `tipo`, `data_evento`, `ora`, `luogo`, `descrizione`, `sync_version`, and `is_featured` must all tolerate null/missing/wrong-type with safe defaults — a single malformed field must never drop the event from the list.
 
 **Upcoming vs past**:
 - `isUpcoming`: `rawDate != null && rawDate >= startOfToday()`
