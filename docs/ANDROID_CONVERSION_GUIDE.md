@@ -667,3 +667,85 @@ makes a "the banner won't go away" report diagnosable in one line.
 
 See `UI_COMPONENTS.md` → "Addendum — HomeFeaturedEventCard" for the visual spec and the
 accessibility contract.
+
+### Why Android needs **zero** backend work for this field
+
+`sync-editorial` reads `mobile_events_public` with `select("*")` and spreads every column
+into the JSON response:
+
+```ts
+const events = (eventsResult.data ?? []) as Array<Record<string, unknown>>
+// …
+return { ...e, attachments: list }
+```
+
+Consequences worth relying on:
+
+- There is **one** endpoint for every client. The moment the column exists on the view, iOS,
+  Android, the web, and anything built later all receive `is_featured` in the same payload.
+  There is no per-platform endpoint, no API version, and no Android-specific deploy.
+- The endpoint is **public and unauthenticated** — Android needs no key to consume it.
+- Adding `is_featured` therefore required **one migration and no Edge Function change**, and
+  Android will require **none at all**: it only has to decode a field that is already on the
+  wire.
+
+The one caveat to remember: the `mobile_*_public` views use **explicit column lists**, not
+`SELECT *`. So a *future, different* field will still need a one-line view change before any
+client can see it. For `is_featured` that work is already done.
+
+**Contract guard.** `scripts/verify-featured-event.sh` (in the iOS repo) asserts all of this
+against the live endpoint with no credentials — whether the column is published, that the
+values are real booleans, which event is promoted, and which winner the deterministic tiebreak
+picks. It is platform-neutral: run it from the Android repo too, in CI or by hand, to prove
+the backend contract before blaming the client.
+
+### Drop-in Kotlin
+
+```kotlin
+// DTO — tolerant by default: missing key, null, or wrong type all mean "not featured"
+@Serializable
+data class EventDto(
+    // … existing fields …
+    @SerialName("is_featured") val isFeatured: Boolean? = null,
+)
+
+// Domain model
+data class Event(
+    // … existing fields …
+    val isFeatured: Boolean = false,
+)
+
+fun EventDto.toEvent() = Event(
+    // … existing mappings …
+    isFeatured = isFeatured ?: false,
+)
+
+// Room — additive migration, never fallbackToDestructiveMigration()
+val MIGRATION_N = object : Migration(N - 1, N) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_events ADD COLUMN isFeatured INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+// Resolution — mirrors EventStore.resolveFeatured; derive it, never store it
+fun resolveFeatured(events: List<Event>): Event? {
+    val flagged = events.filter { it.isFeatured }
+    if (flagged.size <= 1) return flagged.firstOrNull()
+
+    Log.w("FeaturedEvent", "${flagged.size} events flagged featured — resolving deterministically")
+    return flagged.sortedWith(
+        compareBy<Event> { if (it.isUpcoming) 0 else 1 }
+            .thenBy { if (it.isUpcoming) it.rawDate ?: Long.MAX_VALUE else -(it.rawDate ?: Long.MIN_VALUE) }
+            .thenByDescending { it.updatedAt ?: Long.MIN_VALUE }
+            .thenBy { it.id }            // total order → winner never flickers between syncs
+    ).first()
+}
+
+// UI — expose as derived state, so clearing the flag backend-side removes the banner
+val featuredEvent: StateFlow<Event?> = events
+    .map(::resolveFeatured)
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+```
+
+In Compose, render the banner only when the flow emits non-null; emit nothing (not a
+placeholder, not a spacer) when it is null.
