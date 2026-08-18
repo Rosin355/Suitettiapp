@@ -114,7 +114,8 @@ Applied to: `ArticoliView`, `DocumentiView`, `EventiView`, `AboutView`, `Sosteni
 - `EmptyStateView` — illustrated empty/error state: icon badge (88pt circle), title, subtitle, up to 2 actions
 - `LinkedDocumentCard` — compact card for a linked PDF; `RelatedDocument` model (`Codable`); NavigationLink to `PDFReaderView` when URL present; disabled state when nil
 - `AttachmentDTO` — flexible decoder for attachment items; handles Italian/English field names; never throws
-- `HomePromoCard` — reusable dark Home promo/spotlight card (eyebrow chip + title + arrow); whole card is a ≥44pt button with a combined VoiceOver label + hint
+- `HomePromoCard` — reusable dark promo/spotlight card (eyebrow chip + title + arrow); whole card is a ≥44pt button with a combined VoiceOver label + hint. **Not rendered anywhere since 2026-08-12** — kept for future campaigns; the Home spotlight is now `HomeFeaturedEventCard`
+- `HomeFeaturedEventCard` — backend-driven featured-event banner (`events.is_featured`); renders only when an event is featured, opens the native `EventDetailView`. Spec: `FEATURED_EVENT.md`
 - `InAppWebView` — `WKWebView` wrapper; inline media playback; optional `isLoading`/`loadError` bindings via a `WKNavigationDelegate` coordinator (ignores `NSURLErrorCancelled`)
 - `WebPageView` / `WebSheet` — in-app web presentation with real loading spinner + error state ("Riprova" recreates the web view; "Apri nel browser" via `openURL`); `WebSheet` adds a `NavigationStack` + Close button for modal use
 

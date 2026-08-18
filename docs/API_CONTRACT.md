@@ -527,7 +527,9 @@ The iOS app is fully wired for attachments (PHASE-4). After the next sync follow
 
 ## Proposed: Festival / Project content (Option B — native detail)
 
-The app surfaces the 3° Festival two ways today: (1) as a normal **event** (`tipo: "Festival"`) with its native `EventDetailView` — cover image, description, external `link`, and PDF `attachments`; and (2) via the Home "Speciale Festival" card, which opens the website festival hub (`https://www.suitetti.org/progetti/festival-umano-tutto-intero`) in the **external browser** (for the post-event **videos + extra material** that are not in this payload).
+A festival is a normal **event** (`tipo: "Festival"`) with its native `EventDetailView` — cover image, description, external `link`, and PDF `attachments`. Like any other event it can be promoted to the Home banner by setting `is_featured` (see "Featured event" above).
+
+> The Home "Speciale Festival" card that used to open the website festival hub in the external browser was **removed on 2026-08-12** and replaced by the backend-driven featured-event banner, which opens the **native** event detail. The post-event videos + extra material on the website remain outside this payload — that gap is what Option B below would close.
 
 A fully native `FestivalDetailView` / `ProjectDetailView` (roadmap "Option B") needs two things the current contract does **not** expose.
 

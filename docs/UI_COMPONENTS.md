@@ -393,6 +393,8 @@ A Compose component reaches parity when: it matches the token values above; supp
 
 ## Addendum — HomeFeaturedEventCard (2026-08-12)
 
+> Behaviour, data contract and QA live in **`FEATURED_EVENT.md`**. This section covers the visual + accessibility spec only.
+
 **File:** `Components/Cards/HomeFeaturedEventCard.swift`, hosted by
 `Screens/Home/HomeFeaturedEventSection.swift`.
 

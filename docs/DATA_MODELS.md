@@ -82,6 +82,8 @@ Resilient-decode rule (verbatim intent): a malformed event must never drop from 
 
 ### 3.1 `is_featured` — the dynamic Home banner
 
+> **Canonical spec: `FEATURED_EVENT.md`** — schema, API, business rules, Android contract, caching and QA in one place.
+
 Added 2026-08-12. Backed by the `events.is_featured` column and exposed through the
 `mobile_events_public` view. It is the **single source of truth** for the featured-event
 banner on the mobile home:

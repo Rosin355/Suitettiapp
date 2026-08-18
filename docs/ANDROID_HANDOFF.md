@@ -83,6 +83,10 @@ ContentView.onAppear
 
 **Delta sync**: The endpoint accepts `?since=<ISO_DATE>` for incremental updates. The iOS app currently always does a full sync on launch. The delta endpoint is available for future use.
 
+**Featured event**: no extra request. `is_featured` rides along on every event object in this
+same payload, so the banner updates on the existing sync triggers. Do not add a dedicated
+endpoint, a polling loop, or a new Edge Function — see `FEATURED_EVENT.md` §6.
+
 ### 4.2 Store architecture
 
 Each content type has its own `@Observable @MainActor` store:
@@ -132,13 +136,23 @@ ArticleStore.articles (all)
 ## 6. Event Flow
 
 ```
-EventStore.upcomingEvents (filtered, upcoming only)
+EventStore.featuredEvent (derived: events.filter(isFeatured) → deterministic winner)
+    │
+    └── Home → HomeFeaturedEventSection → HomeFeaturedEventCard → EventDetailView
+
+EventStore.upcomingEvents (filtered, upcoming only, minus the featured one)
     │
     └── Home → HomeEventsSection → first 3 upcoming events → cards
 
 EventStore.events (all, sorted by date)
-    └── (future EventiView / full events list)
+    └── EventiView / full events list (always includes the featured event)
 ```
+
+**Featured-event banner (2026-08-12)**: the Home spotlight is driven by the backend
+`events.is_featured` flag, not by anything hardcoded. It is derived from the current event
+list on every read — never stored — so clearing the flag makes the banner disappear on the
+next sync. Full specification, including the Kotlin reference implementation and the
+multiple-winner tiebreak: **`FEATURED_EVENT.md`**.
 
 **EventDetailView layout**:
 - Full-bleed hero (purple gradient fallback if no image)

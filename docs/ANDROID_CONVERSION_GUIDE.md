@@ -581,19 +581,29 @@ fun articleShareText(title: String, slug: String) = """
 ```
 (iOS appends the App Store listing `https://apps.apple.com/it/app/suitetti/id6772963310`; swap the Play Store URL on Android.)
 
-**Home promo banner** (updated 2026-07-02): now an active **Festival spotlight** that opens the Festival page in the **external browser** — see the "Evergreen hero + Festival spotlight" addendum below.
+**Home promo banner** (superseded 2026-08-12): the Festival spotlight described in the
+2026-07-02 addendum below is **no longer rendered**. The Home spotlight slot is now the
+backend-driven featured-event banner — see `FEATURED_EVENT.md`. `HomePromoCard` survives as a
+reusable component for future campaigns; do not port it as a festival card.
 
 **Technical support**: the About screen has a "Supporto tecnico" card → email **info@digitalyogin.com**, subject `Supporto Ditelo sui Tetti iOS v{version} ({build})` (Android: `… Android v{versionName} ({versionCode})`) + pre-filled Italian body. Use `ACTION_SENDTO` `mailto:`; if nothing resolves, show a dialog with the address. Percent-encode subject/body.
 
 ---
 
-## Addendum — Evergreen hero + Festival spotlight (2026-07-02)
+## Addendum — Evergreen hero + Festival spotlight (2026-07-02) — PARTLY SUPERSEDED
+
+> ⚠️ **Superseded 2026-08-12.** The "Festival spotlight card" in this addendum was removed
+> from Home and replaced by the dynamic featured-event banner (`FEATURED_EVENT.md`).
+> **Do not implement the festival card on Android.** The *evergreen hero stats* guidance in
+> this section is still current and still applies.
 
 The website published post-festival videos + extra material. The app was made evergreen while surfacing the 3° Festival via an in-app web view. Mirror on Android:
 
 **Hero stats are evergreen.** The Home hero strip (`HeroStatsView`) shows `100+ Associazioni · 312 Comitati · Italia / Rete civica` — all static, none date-bound. Do **not** hardcode a date/edition stat (the old `16 giu · 3° Festival` went stale). The dead `HomeStatsStrip` was removed.
 
-**Festival spotlight card → external browser.** A reusable dark promo card (`HomePromoCard`: eyebrow chip + title + arrow; whole card is one ≥48dp button with a merged content description) sits under the events section. Tapping opens the Festival page in the **external browser** (iOS: SwiftUI `openURL`):
+**Festival spotlight card → external browser.** *(Historical — removed from Home on
+2026-08-12; retained here only to explain the component that still exists in the iOS
+codebase.)* A reusable dark promo card (`HomePromoCard`: eyebrow chip + title + arrow; whole card is one ≥48dp button with a merged content description) sits under the events section. Tapping opens the Festival page in the **external browser** (iOS: SwiftUI `openURL`):
 
 - **Android**: open the URL externally with `Intent(Intent.ACTION_VIEW, uri)` (default browser) — mirror the iOS "open in Safari" behavior. Do **not** use a `WebView` / Custom Tab for this card; the festival page is rich web content that reads best full-screen in the browser.
 - The destination is `AppEnvironment.festivalURL` on iOS = `https://www.suitetti.org/progetti/festival-umano-tutto-intero` (verified live: the festival hub with videos, gallery, and program/press downloads). It is a **website destination, not part of the sync payload.**
@@ -606,6 +616,8 @@ The website published post-festival videos + extra material. The app was made ev
 ---
 
 ## Dynamic featured event (2026-08-12) — required parity
+
+> **`FEATURED_EVENT.md` is the canonical spec** — read it first. This section is the Compose-specific summary.
 
 The Home spotlight is no longer a hardcoded Festival card. It is now driven end-to-end by a
 backend flag, and Compose must implement the same behaviour.

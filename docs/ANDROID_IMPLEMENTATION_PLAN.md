@@ -193,7 +193,10 @@ Practical build plan for the Kotlin / Jetpack Compose Android app. Follow phases
        @Json(name = "link")        val link: String?,
        @Json(name = "immagine_url") val immagineUrl: String?,
        @Json(name = "updated_at")  val updatedAt: Date?,
-       @Json(name = "sync_version") val syncVersion: Int
+       @Json(name = "sync_version") val syncVersion: Int,
+       // Home featured banner. Nullable + defaulted: a missing key, an explicit null, or a
+       // wrong type must all mean "not featured" and must never drop the event.
+       @Json(name = "is_featured") val isFeatured: Boolean? = null
    )
    ```
 
@@ -253,8 +256,13 @@ Practical build plan for the Kotlin / Jetpack Compose Android app. Follow phases
 
 1. **Define Room entities** in `data/local/entity/`:
    - `ArticleEntity` (mirrors Article domain model; no Color fields — recompute from palette on load)
-   - `EventEntity`
+   - `EventEntity` — includes `isFeatured: Boolean = false` (Home featured banner)
    - `DocumentEntity`
+
+   > Adding `isFeatured` to an **existing** database must be an additive Room migration
+   > (`ALTER TABLE cached_events ADD COLUMN isFeatured INTEGER NOT NULL DEFAULT 0`), never
+   > `fallbackToDestructiveMigration()` — users keep their offline content and old rows read
+   > `false`, the correct pre-sync state.
 
 2. **Define DAOs**:
    ```kotlin
@@ -293,7 +301,12 @@ Practical build plan for the Kotlin / Jetpack Compose Android app. Follow phases
    }
    ```
 
-**Deliverable**: Kill the app while data is loaded. Reopen — data is visible immediately before network returns.
+6. **Cache-invalidation signature** — whatever hash/version decides whether to rewrite the
+   cache **must include `isFeatured`**. Clearing the flag usually changes nothing else about
+   the event, so a text-only signature keeps a stale `true` and flashes the banner on the next
+   cold start. This bug was hit and fixed on iOS; see `FEATURED_EVENT.md` §7.
+
+**Deliverable**: Kill the app while data is loaded. Reopen — data is visible immediately before network returns. Un-feature an event backend-side, sync, then cold-restart: the banner must **not** come back.
 
 ---
 
@@ -333,7 +346,16 @@ class ArticleViewModel @Inject constructor(private val repository: EditorialRepo
 val upcomingEvents: StateFlow<List<Event>> = repository.eventsFlow()
     .map { events -> events.filter { it.isUpcoming }.sortedBy { it.rawDate } }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+// Home featured banner — DERIVED, never stored. Because it is recomputed from the current
+// event list, clearing is_featured backend-side makes the banner disappear on the next sync
+// with no extra bookkeeping. resolveFeatured() applies the deterministic tiebreak.
+val featuredEvent: StateFlow<Event?> = repository.eventsFlow()
+    .map(::resolveFeatured)
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 ```
+
+See `FEATURED_EVENT.md` §4.2 for `resolveFeatured()` and §5 for the full Android contract.
 
 ### DocumentViewModel
 
@@ -388,10 +410,16 @@ Components (in order, top to bottom):
 - `HomeHero` — animated gradient background (use `Canvas` + Compose animation for the mesh gradient effect), brand typography "Ditelo" + "sui Tetti.", stats strip
 - `HeroTicker` — scrolling ambient text strip (see iOS implementation notes)
 - `HomeFeaturedArticlesSection` — vertical list of first 5 articles using `ArticleListRow`
-- `HomeEventsSection` — up to 3 upcoming events as cards; empty state if none
+- `HomeFeaturedEventCard` — **dynamic** featured-event banner, rendered only when
+  `featuredEvent` is non-null; tap opens the native Event Detail. Emit nothing when null (no
+  placeholder, no spacer). See `FEATURED_EVENT.md` §5
+- `HomeEventsSection` — up to 3 upcoming events as cards, **excluding** the featured one;
+  empty state if none; hide the whole section if the featured event was the only upcoming one
 - `HomeQuoteSection` — static quote card
-- `HomeCtaSection` — festival/event CTA card
 - Bottom padding: 130dp to clear the floating bottom navigation
+
+> The old hardcoded festival/event CTA card is **gone**. Do not port it. The featured-event
+> banner replaces it and is driven entirely by `events.is_featured`.
 
 ### 7.4 Articoli screen
 

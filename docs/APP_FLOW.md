@@ -537,6 +537,8 @@ Detail screens (article/event/document) are content-only because the entity is a
 
 ## Addendum — dynamic featured event (2026-08-12)
 
+> Full cross-platform specification: **`FEATURED_EVENT.md`**.
+
 - **Home Festival spotlight removed.** The hardcoded `HomePromoCard` ("SPECIALE · 3° Festival")
   is no longer rendered. It could only ever point at one fixed event and had to be edited in
   code whenever the campaign changed. `HomePromoCard` stays in the codebase as a reusable

@@ -35,6 +35,7 @@ Documentation for rebuilding this app in Kotlin / Jetpack Compose:
 | Document | Purpose |
 |----------|---------|
 | [docs/ANDROID_CONVERSION_GUIDE.md](docs/ANDROID_CONVERSION_GUIDE.md) | **Start here** — primary SwiftUI→Kotlin/Compose conversion guide with concrete mappings |
+| [docs/FEATURED_EVENT.md](docs/FEATURED_EVENT.md) | **Featured-event banner — complete cross-platform spec** (schema, API, business rules, Android contract, caching, QA). Implementable without reading the Swift source |
 | [docs/APP_FLOW.md](docs/APP_FLOW.md) | Every screen + navigation flow (Compose NavHost sketch) |
 | [docs/DATA_MODELS.md](docs/DATA_MODELS.md) | Field-by-field model reference + ready-to-paste `@Serializable` data classes + Room entities |
 | [docs/UI_COMPONENTS.md](docs/UI_COMPONENTS.md) | Design tokens + reusable component catalog with Compose equivalents |
@@ -49,10 +50,23 @@ Key notes for the Android developer:
 - Missing article/event images use the **official brand-logo fallback** (`dst_fallback_logo`), never a gradient — implement with a Coil fallback painter
 - All events may be past — Home shows only upcoming events; empty state is valid
 - The Documenti tab is a first-class tab with its own fetching and PDF viewer
+- The Home spotlight is the **dynamic featured-event banner** driven by `events.is_featured` — derive it from the event list on every read, never store it, render nothing when no event is featured, and open the **native** event detail. Do **not** port the old hardcoded Festival card. Full contract: [docs/FEATURED_EVENT.md](docs/FEATURED_EVENT.md)
+- `is_featured` **must** be part of your cache-invalidation signature, or a cleared flag leaves a stale banner after a cold restart
 
 ---
 
 ## Changelog
+
+### Dynamic Featured Event banner (12 August 2026)
+- Home spotlight is now driven by the backend flag `events.is_featured` instead of a hardcoded 3° Festival card. An editor toggles "in evidenza" in the CMS and the banner changes on the next sync — no App Store release involved
+- New `HomeFeaturedEventCard` + `HomeFeaturedEventSection`; whole card is one tap target opening the **native** `EventDetailView` (never the website); brand-artwork fallback when the event has no cover
+- `isFeatured` propagated through `EventDTO` → `Event` → `EventMapper` → `CachedEvent` → `EventStore`, defaulting to `false` at every hop — a missing key, null, or wrong type never drops the event
+- `EventStore.featuredEvent` is **derived on every read, never persisted**, so clearing the flag makes the banner disappear by itself. Multiple flagged events resolve deterministically (upcoming → nearest date → newest `updatedAt` → id) with a warning
+- `HomeEventsSection` filters the promoted event out of the Home preview; `HomePromoCard` is retained as a reusable component but **no longer rendered**
+- **Bug fixed**: `EditorialCachePolicy.contentSignature` ignored `isFeatured`, so a cleared flag left a stale cached `true` that flashed the banner on next launch
+- **Bug fixed**: `EditorialCacheRepository` force-tried its `ModelContainer` and would crash rather than migrate; it now rebuilds an unmigratable store and degrades gracefully
+- Cross-platform spec: [docs/FEATURED_EVENT.md](docs/FEATURED_EVENT.md). Contract verifier: `scripts/verify-featured-event.sh`
+- ⚠️ **Backend migration written but not yet applied to production** — until it runs, `is_featured` is absent from the payload, every event decodes `false`, and no banner renders (shipping-safe)
 
 ### v2.0.0 — Tab Restructure & Document Decoder Hardening (29 May 2026)
 - Tab bar restructured: **Home**, **Articoli**, **Documenti**, **Chi siamo** (Sostieni removed as a tab)
@@ -316,7 +330,9 @@ DiteloSuiTetti/
 ├── Components/
 │   ├── Cards/
 │   │   ├── GCard.swift               # Generic glass card container
-│   │   └── FeaturedArticleCard.swift # Horizontal-scroll article card (RemoteImageView)
+│   │   ├── FeaturedArticleCard.swift # Horizontal-scroll article card (RemoteImageView)
+│   │   ├── HomeFeaturedEventCard.swift # Dynamic featured-event banner (events.is_featured)
+│   │   └── HomePromoCard.swift       # Reusable dark promo card — NOT currently rendered
 │   ├── Rows/
 │   │   └── ArticleListRow.swift      # Article list row with thumbnail (RemoteImageView)
 │   ├── Chips/
@@ -334,7 +350,8 @@ DiteloSuiTetti/
 │   │   ├── HomeHeroSection.swift     # Full-bleed red hero with app name + tagline
 │   │   ├── HomeStatsStrip.swift      # Stats row (articles, events, signatures)
 │   │   ├── HomeFeaturedArticlesSection.swift  # Horizontal scroll, 3 featured cards
-│   │   └── HomeEventsSection.swift   # Upcoming events list
+│   │   ├── HomeFeaturedEventSection.swift # Renders the featured banner, or nothing
+│   │   └── HomeEventsSection.swift   # Upcoming events (excludes the featured one)
 │   ├── Articles/
 │   │   ├── ArticoliView.swift        # Article browser; loading/error/empty states; pull-to-refresh
 │   │   ├── ArticlesFilterBar.swift   # Category filter pill bar
