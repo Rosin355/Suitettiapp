@@ -170,28 +170,32 @@ If the `attachments` array fails to decode entirely, treat it as empty — never
 | `attachments` | array | No | Optional array of `AttachmentDTO` objects; same schema as Article attachments |
 | `updated_at` | ISO 8601 string | Soft | Nullable |
 | `sync_version` | integer | Yes | Monotonically increasing |
-| `is_featured` | boolean | Soft | **Home featured banner.** Default `false` when missing/null/wrong-type. Added 2026-08-12 |
+| `is_home_featured` | boolean | Soft | **Home featured banner.** Default `false` when missing/null/wrong-type. Added 2026-08-12 |
 
-**Featured event (`is_featured`)**
+**Featured event (`is_home_featured`)**
 
-Backed by `events.is_featured` (`boolean NOT NULL DEFAULT false`) and published through the
+Backed by `events.is_home_featured` (`boolean NOT NULL DEFAULT false`) and published through the
 `mobile_events_public` view. Because `sync-editorial` reads that view with `select("*")` and
 spreads every column into the JSON, exposing the field required **no Edge Function change** —
-only the migration that adds the column and appends it to the view.
+only the view-only migration that appends the existing column. The column, its unique partial
+index and the `set_home_featured_event()` RPC already existed — they have driven the public
+website's banner since 2026-08-07.
 
 ```
-CMS "in evidenza" toggle → events.is_featured → mobile_events_public
+CMS "in evidenza" toggle → events.is_home_featured → mobile_events_public
     → sync-editorial → isFeatured → Home featured-event card → native Event Detail
 ```
 
 - **Not** the same as `is_mobile_visible`. That column gates whether an event is delivered to
-  the apps at all; turning it off removes the event entirely. `is_featured` only promotes an
+  the apps at all; turning it off removes the event entirely. `is_home_featured` only promotes an
   already-visible event to the home banner. (The admin's mobile-visibility toast previously
   read "Evento in evidenza", which described the wrong flag; corrected 2026-08-12.)
 - Toggling it bumps `updated_at` and `sync_version` via the existing `trg_editorial_sync`
   trigger, so delta sync picks the change up with no extra work.
-- The admin toggle is **exclusive**: featuring an event clears the previous one in the same
-  mutation, so at most one event is flagged at a time.
+- Uniqueness is a **database guarantee**: the unique partial index
+  `events_single_home_featured_idx` permits at most one featured non-deleted event. Writes go
+  through the `set_home_featured_event()` RPC, which clears the previous winner in the same
+  transaction.
 - Clients must treat this as the only source of truth for the banner: no hardcoded events, no
   locally persisted banner state. When no event is flagged, no banner renders.
 
@@ -200,7 +204,7 @@ CMS "in evidenza" toggle → events.is_featured → mobile_events_public
 - `ora` is `"HH:mm"` **or null**. When present, combine with the date for a full datetime; when null/empty, use the date alone (midnight). Use this for calendar intent and the `isUpcoming` / `isPast` classification.
 - If `data_evento` cannot be parsed, treat the event as undated (`rawDate = null`). Display the raw string as a fallback.
 
-**Event decode resilience (mandatory)**: Only `id` and `titolo` are hard-required. `slug`, `tipo`, `data_evento`, `ora`, `luogo`, `descrizione`, `sync_version`, and `is_featured` must all tolerate null/missing/wrong-type with safe defaults — a single malformed field must never drop the event from the list.
+**Event decode resilience (mandatory)**: Only `id` and `titolo` are hard-required. `slug`, `tipo`, `data_evento`, `ora`, `luogo`, `descrizione`, `sync_version`, and `is_home_featured` must all tolerate null/missing/wrong-type with safe defaults — a single malformed field must never drop the event from the list.
 
 **Upcoming vs past**:
 - `isUpcoming`: `rawDate != null && rawDate >= startOfToday()`
@@ -527,7 +531,7 @@ The iOS app is fully wired for attachments (PHASE-4). After the next sync follow
 
 ## Proposed: Festival / Project content (Option B — native detail)
 
-A festival is a normal **event** (`tipo: "Festival"`) with its native `EventDetailView` — cover image, description, external `link`, and PDF `attachments`. Like any other event it can be promoted to the Home banner by setting `is_featured` (see "Featured event" above).
+A festival is a normal **event** (`tipo: "Festival"`) with its native `EventDetailView` — cover image, description, external `link`, and PDF `attachments`. Like any other event it can be promoted to the Home banner by setting `is_home_featured` (see "Featured event" above).
 
 > The Home "Speciale Festival" card that used to open the website festival hub in the external browser was **removed on 2026-08-12** and replaced by the backend-driven featured-event banner, which opens the **native** event detail. The post-event videos + extra material on the website remain outside this payload — that gap is what Option B below would close.
 

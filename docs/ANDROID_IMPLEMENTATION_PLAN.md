@@ -196,7 +196,7 @@ Practical build plan for the Kotlin / Jetpack Compose Android app. Follow phases
        @Json(name = "sync_version") val syncVersion: Int,
        // Home featured banner. Nullable + defaulted: a missing key, an explicit null, or a
        // wrong type must all mean "not featured" and must never drop the event.
-       @Json(name = "is_featured") val isFeatured: Boolean? = null
+       @Json(name = "is_home_featured") val isFeatured: Boolean? = null
    )
    ```
 
@@ -348,7 +348,7 @@ val upcomingEvents: StateFlow<List<Event>> = repository.eventsFlow()
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
 // Home featured banner — DERIVED, never stored. Because it is recomputed from the current
-// event list, clearing is_featured backend-side makes the banner disappear on the next sync
+// event list, clearing is_home_featured backend-side makes the banner disappear on the next sync
 // with no extra bookkeeping. resolveFeatured() applies the deterministic tiebreak.
 val featuredEvent: StateFlow<Event?> = repository.eventsFlow()
     .map(::resolveFeatured)
@@ -419,7 +419,7 @@ Components (in order, top to bottom):
 - Bottom padding: 130dp to clear the floating bottom navigation
 
 > The old hardcoded festival/event CTA card is **gone**. Do not port it. The featured-event
-> banner replaces it and is driven entirely by `events.is_featured`.
+> banner replaces it and is driven entirely by `events.is_home_featured`.
 
 ### 7.4 Articoli screen
 

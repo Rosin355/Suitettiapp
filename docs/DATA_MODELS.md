@@ -75,21 +75,21 @@ Attachments arrive under `attachments` or `allegati`. Events are the most defens
 | `immagine_url` | `String?` | Yes | `String?` | Null → brand-logo fallback. |
 | `updated_at` | `Date?` | Yes | `Instant?` | |
 | `sync_version` | `Int` | No (defaults `0`) | `Int?` | Tolerates null/missing. |
-| `is_featured` | `Bool` | No (defaults `false`) | `Boolean` | **Home featured banner.** Missing key, null, or wrong type all decode to `false`. |
+| `is_home_featured` | `Bool` | No (defaults `false`) | `Boolean` | **Home featured banner.** Missing key, null, or wrong type all decode to `false`. |
 | `attachments` / `allegati` | `[RelatedDocument]` | array (defaults `[]`) | `List<AttachmentDto>` | Per-item lossy. |
 
 Resilient-decode rule (verbatim intent): a malformed event must never drop from the list unless its identity (`id`) or `titolo` is missing. Every other field tolerates null/missing/wrong-type by falling back to a safe default. `data_evento` is kept as the **raw string** in the DTO and parsed when building the UI `Event`; an empty `data_evento` becomes an "undated" event rather than being discarded.
 
-### 3.1 `is_featured` — the dynamic Home banner
+### 3.1 `is_home_featured` — the dynamic Home banner
 
 > **Canonical spec: `FEATURED_EVENT.md`** — schema, API, business rules, Android contract, caching and QA in one place.
 
-Added 2026-08-12. Backed by the `events.is_featured` column and exposed through the
+Added 2026-08-12. Backed by the `events.is_home_featured` column and exposed through the
 `mobile_events_public` view. It is the **single source of truth** for the featured-event
 banner on the mobile home:
 
 ```
-CMS "in evidenza" toggle → events.is_featured → mobile_events_public
+CMS "in evidenza" toggle → events.is_home_featured → mobile_events_public
     → sync-editorial → isFeatured → Home featured-event card → native Event Detail
 ```
 
@@ -107,9 +107,9 @@ Rules that both platforms must follow:
   is exclusive), pick a deterministic winner and log a warning rather than crashing or
   flickering. Order: upcoming first → nearest event date → newest `updated_at` → lowest
   `id`. The final `id` tiebreak is what guarantees the same winner across launches.
-- `is_featured` must participate in the **cache-invalidation signature**. Toggling it often
+- `is_home_featured` must participate in the **cache-invalidation signature**. Toggling it often
   changes nothing else about the event, so a signature built only from text would keep a
-  stale `is_featured = true` row and flash the banner on next launch.
+  stale `is_home_featured = true` row and flash the banner on next launch.
 
 ---
 

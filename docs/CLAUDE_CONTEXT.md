@@ -64,7 +64,7 @@
 - **Canonical share domain** = `AppEnvironment.publicWebsiteURL` (`https://www.suitetti.org`). All shareable links use `articleShareURL/eventShareURL/documentShareURL(slug:)` → `…/{articoli|eventi|documenti}/{slug}`. Never share legacy/preview domains (`comitaticivici.it`, `*.lovable.app`). `AppEnvironment.websiteURL` (`comitaticivici.it`) remains only for the privacy/terms web pages, not sharing.
 - `ShareMessage` builds inviting share text (title + canonical URL + `AppEnvironment.appStoreURL`), used by the three detail-view `ShareLink`s. `[Share] …` logs on share-button appear.
 - **Technical support**: `AboutSupportSection` opens `mailto:` `AppEnvironment.supportEmail` (`info@digitalyogin.com`) with subject `Supporto Ditelo sui Tetti iOS v{version} ({build})`; fallback alert if Mail is unavailable.
-- **Home promo banner** (2026-07-02): `HomePromoCard` (reusable, generic) renders the "SPECIALE · 3° Festival" spotlight in `HomeView`; tapping opens `AppEnvironment.festivalURL` in the **external browser** via SwiftUI `openURL` — the festival page (`/progetti/festival-umano-tutto-intero`) is rich web content (videos, gallery, downloads). The in-app WebView components (`InAppWebView`/`WebPageView`/`WebSheet`) remain in the codebase but are **not wired to this card**. It replaced the old festival-specific `HomeReferendumCTA` (deleted). Swap the card's copy + `AppEnvironment.festivalURL` for a future promo. A Festival is otherwise a normal event (`tipo: "Festival"`) with the full native `EventDetailView`; native video + related-articles (Option B) is backend-gated — see API_CONTRACT "Proposed: Festival / Project content".
+- **Home spotlight** (2026-08-18): the Home spotlight is `HomeFeaturedEventCard`, driven by `events.is_home_featured` and opening the **native** `EventDetailView`. The earlier `HomePromoCard` "SPECIALE · 3° Festival" card that opened `AppEnvironment.festivalURL` in the external browser is **no longer rendered**; the component (and `InAppWebView`/`WebPageView`/`WebSheet`) remain in the codebase for future campaigns. A Festival is otherwise a normal event (`tipo: "Festival"`) with the full native `EventDetailView`; native video + related-articles (Option B) is backend-gated — see API_CONTRACT "Proposed: Festival / Project content".
 
 ### Navigation
 - `ContentView` → `TabView` with four tabs: `.home`, `.articoli`, `.documenti`, `.chiSiamo`
@@ -115,7 +115,7 @@ Applied to: `ArticoliView`, `DocumentiView`, `EventiView`, `AboutView`, `Sosteni
 - `LinkedDocumentCard` — compact card for a linked PDF; `RelatedDocument` model (`Codable`); NavigationLink to `PDFReaderView` when URL present; disabled state when nil
 - `AttachmentDTO` — flexible decoder for attachment items; handles Italian/English field names; never throws
 - `HomePromoCard` — reusable dark promo/spotlight card (eyebrow chip + title + arrow); whole card is a ≥44pt button with a combined VoiceOver label + hint. **Not rendered anywhere since 2026-08-12** — kept for future campaigns; the Home spotlight is now `HomeFeaturedEventCard`
-- `HomeFeaturedEventCard` — backend-driven featured-event banner (`events.is_featured`); renders only when an event is featured, opens the native `EventDetailView`. Spec: `FEATURED_EVENT.md`
+- `HomeFeaturedEventCard` — backend-driven featured-event banner (`events.is_home_featured`); renders only when an event is featured, opens the native `EventDetailView`. Spec: `FEATURED_EVENT.md`
 - `InAppWebView` — `WKWebView` wrapper; inline media playback; optional `isLoading`/`loadError` bindings via a `WKNavigationDelegate` coordinator (ignores `NSURLErrorCancelled`)
 - `WebPageView` / `WebSheet` — in-app web presentation with real loading spinner + error state ("Riprova" recreates the web view; "Apri nel browser" via `openURL`); `WebSheet` adds a `NavigationStack` + Close button for modal use
 
@@ -159,7 +159,7 @@ Non-negotiables when touching this area:
   itself when an editor clears the flag.
 - Tapping opens the **native** `EventDetailView` — not the website, and not a second detail
   screen.
-- `is_featured` must stay part of `EditorialCachePolicy.contentSignature`, otherwise clearing
+- `is_home_featured` must stay part of `EditorialCachePolicy.contentSignature`, otherwise clearing
   the flag leaves a stale cached `true` that flashes the banner on the next launch.
 - When several events are flagged, `EventStore.resolveFeatured(from:)` picks deterministically
   (upcoming → nearest date → newest `updatedAt` → id) and logs a warning. Do not "fix" this by
@@ -190,8 +190,8 @@ Screen height tiers:
 - **Delta sync**: append `?since=<ISO8601_date>`
 - Public, no auth required
 - Returns `server_time`, `articles[]` (with `attachments: []`), `events[]` (with `attachments: []`), `documents[]`
-- **`events[].is_featured`** (boolean, default `false`) — drives the Home featured-event banner.
-  Source of truth is the `events.is_featured` column, surfaced via the `mobile_events_public`
+- **`events[].is_home_featured`** (boolean, default `false`) — drives the Home featured-event banner.
+  Source of truth is the `events.is_home_featured` column, surfaced via the `mobile_events_public`
   view; `sync-editorial` publishes it automatically because it spreads `select("*")`.
   Not to be confused with `is_mobile_visible`, which gates whether an event syncs at all.
   ⚠️ The migration adding this column is written but **not yet applied to production** — see

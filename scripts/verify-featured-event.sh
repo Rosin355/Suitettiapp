@@ -9,7 +9,7 @@
 #   scripts/verify-featured-event.sh
 #
 # What it tells you, in order:
-#   1. whether the `is_featured` migration has reached production
+#   1. whether the `is_home_featured` migration has reached production
 #   2. which event (if any) is currently promoted
 #   3. what the iOS/Android apps will therefore render
 #
@@ -45,13 +45,13 @@ if not events:
 
 # 1. Is the column live? The function spreads select("*") from mobile_events_public,
 #    so the key is present on every event as soon as the view exposes it.
-with_key = [e for e in events if "is_featured" in e]
+with_key = [e for e in events if "is_home_featured" in e]
 
 print()
 if not with_key:
-    print("✗ `is_featured` is ABSENT from the payload")
+    print("✗ `is_home_featured` is ABSENT from the payload")
     print("  → the migration has NOT been applied to production yet.")
-    print("  → apply supabase/migrations/20260812120000_add_events_is_featured.sql")
+    print("  → apply supabase/migrations/20260818120000_expose_home_featured_to_mobile.sql")
     print("    in the ditelo-on-air repo, then re-run this script.")
     print()
     print("  Apps are unaffected in this state: every event decodes as")
@@ -59,21 +59,21 @@ if not with_key:
     sys.exit(1)
 
 if len(with_key) != len(events):
-    print(f"⚠ `is_featured` present on only {len(with_key)}/{len(events)} events — unexpected")
+    print(f"⚠ `is_home_featured` present on only {len(with_key)}/{len(events)} events — unexpected")
 else:
-    print(f"✓ `is_featured` present on all {len(events)} events — migration is live")
+    print(f"✓ `is_home_featured` present on all {len(events)} events — migration is live")
 
 # 2. Type sanity: anything other than a real boolean means something re-shaped the view.
-bad = [e for e in with_key if not isinstance(e.get("is_featured"), bool)]
+bad = [e for e in with_key if not isinstance(e.get("is_home_featured"), bool)]
 if bad:
-    print(f"⚠ {len(bad)} event(s) have a non-boolean is_featured "
-          f"(e.g. {bad[0].get('titolo')!r} → {bad[0].get('is_featured')!r})")
+    print(f"⚠ {len(bad)} event(s) have a non-boolean is_home_featured "
+          f"(e.g. {bad[0].get('titolo')!r} → {bad[0].get('is_home_featured')!r})")
     print("  Clients tolerate this (decodes to false) but the column type is wrong.")
 else:
     print("✓ all values are proper booleans")
 
 # 3. Who is promoted?
-flagged = [e for e in events if e.get("is_featured") is True]
+flagged = [e for e in events if e.get("is_home_featured") is True]
 print()
 if not flagged:
     print("• nothing is currently featured → apps render NO banner")

@@ -43,7 +43,7 @@ launch → restore cached events → banner shows if a cached event is featured
 
 Because step 3 replaces store contents on **every** successful sync (not only when the cache
 is rewritten), clearing the flag backend-side removes the banner as soon as that sync lands.
-`is_featured` is also part of the cache-invalidation signature, so the persisted cache is
+`is_home_featured` is also part of the cache-invalidation signature, so the persisted cache is
 rewritten too and the banner cannot reappear on the next launch. Diagnostics for this are
 logged as `[FeaturedEvent] cached=… / remote=… / final=…`.
 
@@ -183,7 +183,7 @@ Each tab declares an `isPresented`-style `navigationDestination` so a resolved d
 2. **Ticker** (`HeroTickerView`) — full-width scrolling ticker.
 3. **Stats strip** (`HeroStatsView`, part of `HomeHeroSection`, on a transparent dark gradient over the mesh — no blur): three **evergreen** static stats — `100+ Associazioni`, `312 Comitati`, `Italia · Rete civica`. (The separate `HomeStatsStrip` and its date-bound `16 giu · 3° Festival` stat were removed 2026-07-02 so the hero never goes stale.)
 4. **In evidenza** (`HomeFeaturedArticlesSection`) — section header "In evidenza" with "Vedi tutti" action (switches to `.articoli` tab). Shows the **first 6** articles. iPhone = vertical card list (`ArticleListRow`); iPad = 2-column grid. Each card → `ArticleDetailView` via `NavigationLink` with `.navigationTransition(.zoom)`.
-5. **Evento in evidenza** (`HomeFeaturedEventSection` → `HomeFeaturedEventCard`) — the single editorial spotlight, driven entirely by the backend `is_featured` flag. Renders **only** when `EventStore.featuredEvent != nil`; otherwise the section emits nothing at all (no placeholder, no reserved space). Tapping pushes the native `EventDetailView`. Replaced the hardcoded Festival CTA on 2026-08-12.
+5. **Evento in evidenza** (`HomeFeaturedEventSection` → `HomeFeaturedEventCard`) — the single editorial spotlight, driven entirely by the backend `is_home_featured` flag. Renders **only** when `EventStore.featuredEvent != nil`; otherwise the section emits nothing at all (no placeholder, no reserved space). Tapping pushes the native `EventDetailView`. Replaced the hardcoded Festival CTA on 2026-08-12.
 6. **Prossimi eventi** (`HomeEventsSection`) — header "Prossimi eventi" with "Tutti →" → `EventiView`. Shows first 3 upcoming events as `EventRow`s; each → `EventDetailView`. Empty copy: "Nessun evento in programma." The promoted event is filtered out of this preview so it never appears twice on one screen; if it was the *only* upcoming event, the whole section stands down rather than contradicting the banner with "Nessun evento in programma". `EventiView` still lists it.
 7. **Quote card**.
 8. Bottom clearance spacer (~130 pt) so content clears the floating tab bar.
@@ -543,7 +543,7 @@ Detail screens (article/event/document) are content-only because the entity is a
   is no longer rendered. It could only ever point at one fixed event and had to be edited in
   code whenever the campaign changed. `HomePromoCard` stays in the codebase as a reusable
   component for future campaigns.
-- **Replaced by `HomeFeaturedEventCard`**, driven by the backend `events.is_featured` flag.
+- **Replaced by `HomeFeaturedEventCard`**, driven by the backend `events.is_home_featured` flag.
   An editor toggles "in evidenza" in the CMS; the banner appears on the next sync. Clearing it
   removes the banner. No app release is involved in either direction.
 - The banner opens the **native** `EventDetailView` — not the website. This is a change of kind
@@ -552,7 +552,7 @@ Detail screens (article/event/document) are content-only because the entity is a
 - Nothing about the banner is persisted separately. It is recomputed from `EventStore.events`,
   which is what makes disappearance automatic.
 
-> Android: mirror exactly. Derive the banner from the same `is_featured` field, render nothing
+> Android: mirror exactly. Derive the banner from the same `is_home_featured` field, render nothing
 > when no event is flagged, and navigate to the existing event-detail route. Do not implement
 > local business logic (date windows, "latest festival", hardcoded slugs) to decide what to
 > promote — the backend is the only source of truth.

@@ -39,7 +39,7 @@ final class FeaturedEventTests: XCTestCase {
     }
 
     private func eventJSON(featured: String?) -> String {
-        let flag = featured.map { ",\"is_featured\":\($0)" } ?? ""
+        let flag = featured.map { ",\"is_home_featured\":\($0)" } ?? ""
         return """
         {"id":"11111111-1111-1111-1111-111111111111","titolo":"Evento","slug":"e",
          "tipo":"evento","data_evento":"2026-10-16","ora":null,"luogo":"Roma",
@@ -147,7 +147,7 @@ final class FeaturedEventTests: XCTestCase {
         let on = payload([makeEvent("Festival", featured: true, daysFromNow: 30, id: id)]).contentSignature
         let off = payload([makeEvent("Festival", featured: false, daysFromNow: 30, id: id)]).contentSignature
 
-        XCTAssertNotEqual(on, off, "is_featured must participate in the content signature")
+        XCTAssertNotEqual(on, off, "is_home_featured must participate in the content signature")
         XCTAssertTrue(EditorialCachePolicy.shouldReplace(fetchedSignature: off, cachedSignature: on))
     }
 

@@ -38,7 +38,36 @@ Tasks are tracked here as the single source of truth across AI sessions.
 
 ---
 
-## Post-1.0.2 — Dynamic featured event (2026-08-12)
+## Post-1.0.2 — Featured event exposed to mobile (2026-08-18)
+
+Correction to the 2026-08-12 entry below, which was written against a checkout 169 commits
+behind `origin/main`.
+
+- [x] **`events.is_home_featured` already existed** (backend repo, 2026-08-07) with a unique
+      partial index, a `set_home_featured_event()` RPC, an admin toggle on the event form, and
+      the website already consuming it via `useHomeFeaturedEvent`. Verified against production.
+- [x] **The proposed parallel `is_featured` column was discarded** — it would have been the
+      duplicate field the brief explicitly forbade. Nothing duplicate reached production.
+- [x] **Real gap closed**: `mobile_events_public` never selected the column, so the apps could
+      not see it. View-only migration `20260818120000_expose_home_featured_to_mobile.sql`
+      (backend commit `8b0dd3d`, pushed) appends it. No new column, no Edge Function change.
+- [x] **iOS wire key corrected** to `is_home_featured` — without this the app would have
+      silently never seen the flag.
+- [x] **Admin toast fix kept** — the events-list switch still said "Evento in evidenza" while
+      writing `is_mobile_visible`, which hides the event from the apps entirely.
+- [x] Docs, verifier script and tests updated to the correct field.
+
+**Blocked / follow-up**:
+- [ ] **Apply the view migration to production.** Not applied by this session: the Supabase CLI
+      account here has no privileges on project `kbswgeliohnpwopzzzpc` (HTTP 403). Until it
+      runs, the apps show no banner; the website is unaffected.
+- [ ] After applying, run `scripts/verify-featured-event.sh` — an event is already featured
+      ("SUI TETTI DEL MEETING — Rimini 2026", 21 Aug 2026), so the banner should appear
+      immediately on the next app sync.
+
+---
+
+## Post-1.0.2 — Dynamic featured event (2026-08-12) — partly superseded
 
 Replaced the hardcoded Festival spotlight with a CMS-driven banner. Editors pick what is
 promoted; the app never needs a release to change it.
@@ -48,7 +77,7 @@ promoted; the app never needs a release to change it.
       is hardcoded too. The admin's "Evento in evidenza" toast was mislabeled copy on the
       `is_mobile_visible` (sync-visibility) toggle — reusing that flag would have deleted
       events from the apps.
-- [x] **Migration written** — `events.is_featured boolean NOT NULL DEFAULT false` + partial
+- [x] **Migration written** — `events.is_home_featured boolean NOT NULL DEFAULT false` + partial
       index + the column appended to `mobile_events_public`. Additive and backward compatible;
       `sync-editorial` needs no change because it spreads `select("*")` from the view.
 - [x] **Admin toggle** — exclusive "in evidenza" switch in `AdminEditorialEvents.tsx`
@@ -62,7 +91,7 @@ promoted; the app never needs a release to change it.
       element, Dynamic Type via `@ScaledMetric`.
 - [x] **Old Festival CTA removed from Home** — `HomePromoCard` retained as a component but no
       longer rendered.
-- [x] **Cache-signature fix** — `is_featured` now feeds `contentSignature`, so clearing the
+- [x] **Cache-signature fix** — `is_home_featured` now feeds `contentSignature`, so clearing the
       flag rewrites the cache and the banner cannot reappear on next launch.
 - [x] **Crash-proofed the cache** — `EditorialCacheRepository` no longer force-tries its
       `ModelContainer`; it rebuilds an unmigratable store and degrades gracefully.
@@ -73,7 +102,7 @@ promoted; the app never needs a release to change it.
 **Blocked / follow-up**:
 - [ ] **Apply the migration to production.** The Supabase CLI account available locally has no
       privileges on project `kbswgeliohnpwopzzzpc`, so it could not be applied from here. Until
-      it runs, `is_featured` is absent from the payload, every event decodes as `false`, and
+      it runs, `is_home_featured` is absent from the payload, every event decodes as `false`, and
       the banner stays hidden — the app is shipping-safe in that state.
 - [ ] After applying, regenerate `src/integrations/supabase/types.ts` from the live schema
       (the column was hand-added there to keep the web build type-checking).

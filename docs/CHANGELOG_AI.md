@@ -4,7 +4,53 @@ AI-assisted session log. Most recent first.
 
 ---
 
+## 2026-08-18 — Correction: the flag is `is_home_featured`, and the website already had it
+
+The 2026-08-12 audit below was run against a **checkout 169 commits behind `origin/main`** and
+reached two wrong conclusions. Correcting the record:
+
+- **`events.is_home_featured` already existed**, added 2026-08-07 in the backend repo together
+  with a unique partial index (`events_single_home_featured_idx`), a `SECURITY DEFINER` RPC
+  (`set_home_featured_event`), and an admin toggle on the event form. Confirmed present in
+  production by querying the table directly.
+- **The public website already consumed it** via the `useHomeFeaturedEvent` hook. The claim
+  that the web banner was hardcoded was true only of the stale checkout.
+
+So the original brief was right: the behaviour did exist on the web, and a featured field did
+exist on the backend. The proposed parallel `events.is_featured` column would have been exactly
+the "second field" the brief forbade. **It was discarded before it shipped** — no duplicate
+column was ever created in production.
+
+The real gap was narrower: `mobile_events_public` never selected the column, so
+`sync-editorial` did not publish it and the apps could not see it.
+
+**What changed**
+
+- Backend (`ditelo-on-air`, commit `8b0dd3d`): a **view-only** migration,
+  `20260818120000_expose_home_featured_to_mobile.sql`, appending `is_home_featured` to
+  `mobile_events_public`. No new column, no new index, no Edge Function change.
+- iOS: `EventDTO` now decodes the wire key **`is_home_featured`** (CodingKey raw value
+  `isHomeFeatured`, since the decoder uses `.convertFromSnakeCase`). The domain property keeps
+  the shorter `isFeatured` name. Without this the app would have silently never seen the flag.
+- `scripts/verify-featured-event.sh`, `FeaturedEventTests` and all documentation updated to the
+  correct field name.
+- The multi-winner tiebreak is retained as defence in depth, but it is now documented as
+  effectively unreachable: the unique index makes single-featured a database guarantee.
+
+Everything else from 2026-08-12 stands — the client pipeline, the derived (never stored)
+resolution, the removal of the hardcoded Festival card, and both latent bug fixes.
+
+**Still pending:** the view migration is committed but **not yet applied to production**. Until
+it runs, `sync-editorial` omits the field, every event decodes `false`, and no app banner
+renders. The website banner is unaffected (it queries `events` directly).
+
+---
+
 ## 2026-08-12 — Dynamic featured-event banner (replaces the hardcoded Festival card)
+
+> ⚠️ **Partly superseded** by the 2026-08-18 entry above: the backend field is
+> `is_home_featured` (which already existed), not a new `is_featured`, and the website was
+> already consuming it. The audit findings below reflect a stale checkout.
 
 **Change**: the Home spotlight is now driven by a backend flag instead of being hardcoded to
 the 3° Festival. An editor toggles "in evidenza" in the CMS and the banner appears on the next
@@ -16,7 +62,7 @@ The request assumed the web already had this behaviour and that the backend alre
 featured field. Neither was true:
 
 - `events` had **no** featured column — only `is_mobile_visible`, `status`, `deleted_at`.
-  `is_featured` existed on `documents`, `partners` and `ditelo_press_articles`, but not events.
+  `is_home_featured` existed on `documents`, `partners` and `ditelo_press_articles`, but not events.
 - `mobile_events_public`, `sync-editorial`, and the live payload (63 events) exposed nothing.
 - The web home renders a **hardcoded** `FestivalPromoBanner` + `FestivalThankYouSection`;
   "Prossimi Eventi" is just `events.slice(0, 3)`.
@@ -24,13 +70,13 @@ featured field. Neither was true:
   actually writes **`is_mobile_visible`** — a copy bug. Reusing that flag as "featured" would
   have made un-featuring an event delete it from the apps; all 63 synced events have it `true`.
 
-So the flag had to be created. Named `is_featured` to match the convention already used by the
+So the flag had to be created. Named `is_home_featured` to match the convention already used by the
 sibling tables in the same database.
 
 ### Backend (in the `ditelo-on-air` repo — **migration not yet applied**)
 
-- `supabase/migrations/20260812120000_add_events_is_featured.sql` — adds
-  `events.is_featured boolean NOT NULL DEFAULT false`, a partial index, and appends the column
+- `supabase/migrations/20260818120000_expose_home_featured_to_mobile.sql` — exposes
+  `events.is_home_featured boolean NOT NULL DEFAULT false`, a partial index, and appends the column
   to `mobile_events_public`. Additive only: no existing column, filter or ordering changes.
 - **No Edge Function change was needed.** `sync-editorial` reads the view with `select("*")`
   and spreads every column into the JSON, so the field publishes itself once the view has it.
@@ -59,7 +105,7 @@ sibling tables in the same database.
 ### Two latent bugs fixed along the way
 
 - **`EditorialCachePolicy.contentSignature`** hashed only event id/title/description. Toggling
-  `is_featured` usually changes nothing else, so the persisted cache would have kept a stale
+  `is_home_featured` usually changes nothing else, so the persisted cache would have kept a stale
   `isFeatured = true` and flashed the banner on next launch. The flag now feeds the signature.
 - **`EditorialCacheRepository`** opened its `ModelContainer` with `try!` — a schema change
   would have crashed on launch rather than migrating. It now opens defensively, rebuilds the

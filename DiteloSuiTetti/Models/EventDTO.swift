@@ -13,17 +13,22 @@ struct EventDTO: Decodable {
     let immagineUrl: String?
     let updatedAt: Date?
     let syncVersion: Int
-    /// Backend column `events.is_featured`, published by the `mobile_events_public`
-    /// view. Marks the single event the CMS promotes to the Home banner. Older
-    /// backends omit the key entirely, which decodes to `false` — an app talking to
-    /// a backend without the column simply renders no banner.
+    /// Backend column `events.is_home_featured`, published by the `mobile_events_public`
+    /// view. Marks the single event the CMS promotes to the Home banner — the same flag
+    /// that drives the banner on the public website. A backend whose view predates the
+    /// column omits the key entirely, which decodes to `false`, so the app simply renders
+    /// no banner rather than failing.
     let isFeatured: Bool
     /// PDF/document attachments decoded from `attachments` or `allegati` array.
     let attachments: [RelatedDocument]
 
     private enum CodingKeys: String, CodingKey {
         case id, titolo, slug, tipo, dataEvento, ora, luogo, descrizione
-        case link, immagineUrl, updatedAt, syncVersion, isFeatured
+        // The wire key is `is_home_featured`; `.convertFromSnakeCase` turns that into
+        // `isHomeFeatured`, so the raw value must match that exactly. The property keeps
+        // the shorter `isFeatured` name used throughout the app.
+        case link, immagineUrl, updatedAt, syncVersion
+        case isFeatured = "isHomeFeatured"
         case attachments, allegati
     }
 

@@ -83,7 +83,7 @@ ContentView.onAppear
 
 **Delta sync**: The endpoint accepts `?since=<ISO_DATE>` for incremental updates. The iOS app currently always does a full sync on launch. The delta endpoint is available for future use.
 
-**Featured event**: no extra request. `is_featured` rides along on every event object in this
+**Featured event**: no extra request. `is_home_featured` rides along on every event object in this
 same payload, so the banner updates on the existing sync triggers. Do not add a dedicated
 endpoint, a polling loop, or a new Edge Function — see `FEATURED_EVENT.md` §6.
 
@@ -149,7 +149,7 @@ EventStore.events (all, sorted by date)
 ```
 
 **Featured-event banner (2026-08-12)**: the Home spotlight is driven by the backend
-`events.is_featured` flag, not by anything hardcoded. It is derived from the current event
+`events.is_home_featured` flag, not by anything hardcoded. It is derived from the current event
 list on every read — never stored — so clearing the flag makes the banner disappear on the
 next sync. Full specification, including the Kotlin reference implementation and the
 multiple-winner tiebreak: **`FEATURED_EVENT.md`**.

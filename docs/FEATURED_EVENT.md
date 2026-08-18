@@ -6,18 +6,26 @@ Single source of truth for the dynamic "Evento in evidenza" banner on the mobile
 touching the backend or the iOS implementation. Everything needed is here — you should not
 have to read the Swift source to build the Android version.
 
-**Status:** iOS shipped (2026-08-12). Backend migration written, **not yet applied to
-production**. Android pending.
+**Status:** the flag and the website banner have existed since 2026-08-07. iOS client shipped
+2026-08-12. The view change that exposes the flag to mobile is committed (2026-08-18) but
+**not yet applied to production**, so no app banner renders until it runs. Android pending.
 
 ---
 
 ## 1. Why this exists
 
-Before this feature, the Home spotlight was a **hardcoded card** pointing at the 3° Festival.
-Changing what was promoted meant editing Swift and shipping an App Store release.
+The **website** has had a dynamic featured-event banner since 2026-08-07: an editor toggles
+"in evidenza" on the event form and `suitetti.org` promotes it, driven by
+`events.is_home_featured`.
 
-Now an editor toggles a switch in the CMS and the banner changes on the next sync. Nothing in
-any client is bound to a specific event, and **no app release is involved in either direction**.
+The **apps** were left behind. The iOS Home spotlight was a **hardcoded card** pointing at the
+3° Festival, so changing what was promoted meant editing Swift and shipping an App Store
+release — and the apps could not follow the editor's choice at all, because
+`mobile_events_public` never selected the column.
+
+This feature closes that gap: web, iOS and Android now render the same banner from the same
+flag. Nothing in any client is bound to a specific event, and **no app release is involved**
+when the promoted event changes.
 
 > Never reintroduce a hardcoded Festival banner, a slug allowlist, or a date window that
 > "knows" which event matters. The backend decides; clients render.
@@ -29,23 +37,45 @@ any client is bound to a specific event, and **no app release is involved in eit
 | Property | Value |
 |---|---|
 | Table | `public.events` |
-| Column | `is_featured` |
+| Column | `is_home_featured` |
 | Type | `boolean` |
 | Constraint | `NOT NULL` |
 | Default | `false` |
-| Index | `idx_events_is_featured` — partial, `WHERE is_featured = true` |
+| Index | `events_single_home_featured_idx` — **unique** partial, `ON events((true)) WHERE is_home_featured = true AND deleted_at IS NULL` |
+| Written by | `set_home_featured_event(_id uuid, _featured boolean)` RPC — never a direct UPDATE |
+
+The column, its index and the RPC already exist in production. They were added by
+`supabase/migrations/20260807102819_…sql` in the **ditelo-on-air** repo, together with the
+admin toggle on the event form and the website's `useHomeFeaturedEvent` hook:
 
 ```sql
 ALTER TABLE public.events
-  ADD COLUMN IF NOT EXISTS is_featured boolean NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS is_home_featured boolean NOT NULL DEFAULT false;
 
-CREATE INDEX IF NOT EXISTS idx_events_is_featured
-  ON public.events (is_featured)
-  WHERE is_featured = true;
+CREATE UNIQUE INDEX IF NOT EXISTS events_single_home_featured_idx
+  ON public.events ((true)) WHERE is_home_featured = true AND deleted_at IS NULL;
+
+CREATE OR REPLACE FUNCTION public.set_home_featured_event(_id uuid, _featured boolean) …
 ```
 
-Migration: `supabase/migrations/20260812120000_add_events_is_featured.sql` in the
-**ditelo-on-air** repo (the web/backend repo — not this one).
+> **Do not add a second flag.** `is_home_featured` is the one source of truth for web and
+> mobile alike. An earlier draft of this work proposed a parallel `events.is_featured`; that
+> was a mistake caused by auditing a stale checkout, and it was discarded before it shipped.
+
+The only mobile-facing change is a **view-only** migration,
+`supabase/migrations/20260818120000_expose_home_featured_to_mobile.sql`, which appends the
+existing column to `mobile_events_public` so `sync-editorial` publishes it.
+
+### The unique index does the hard work
+
+`events_single_home_featured_idx` makes "at most one featured event" a **database guarantee**,
+not a convention. A direct `UPDATE events SET is_home_featured = true` on a second row fails
+outright. This is why writes go through `set_home_featured_event()`, which clears the previous
+winner before setting the new one, inside one transaction. The RPC is `SECURITY DEFINER` and
+checks `is_admin_or_super(auth.uid())`.
+
+Clients still implement the §4.2 tiebreak as defence in depth, but in practice they will never
+see two flagged events.
 
 ### Behaviour
 
@@ -53,17 +83,17 @@ Migration: `supabase/migrations/20260812120000_add_events_is_featured.sql` in th
   until an editor actually features something.
 - Toggling it fires the existing `trg_editorial_sync` trigger, which bumps `updated_at` and
   `sync_version`. Delta sync therefore picks the change up with no extra work.
-- The admin toggle is **exclusive**: featuring an event clears the previously featured one in
-  the same mutation, so at most one row is `true` at a time.
+- Uniqueness is enforced by the database (unique partial index), and the RPC clears the
+  previous winner in the same transaction — so at most one row is ever `true`.
 
-### ⚠️ `is_featured` is NOT `is_mobile_visible`
+### ⚠️ `is_home_featured` is NOT `is_mobile_visible`
 
 These are different columns with different jobs. Confusing them is destructive:
 
 | Column | Meaning | Turning it off |
 |---|---|---|
 | `is_mobile_visible` | Does this event sync to the apps **at all**? | Event **disappears entirely** from both apps |
-| `is_featured` | Is this event promoted to the home banner? | Banner disappears; event stays in the list |
+| `is_home_featured` | Is this event promoted to the home banner? | Banner disappears; event stays in the list |
 
 Until 2026-08-12 the admin showed a success toast reading *"Evento in evidenza"* on the
 `is_mobile_visible` switch — a copy bug, now fixed. All currently synced events have
@@ -75,14 +105,14 @@ Until 2026-08-12 the admin showed a success toast reading *"Evento in evidenza"*
 
 ### Exposure
 
-`is_featured` is appended as the final column of the `public.mobile_events_public` view:
+`is_home_featured` is appended as the final column of the `public.mobile_events_public` view:
 
 ```sql
 CREATE OR REPLACE VIEW public.mobile_events_public AS
 SELECT
   id, titolo, slug, tipo, data_evento, ora, luogo, descrizione,
   link, immagine_url, updated_at, sync_version,
-  is_featured
+  is_home_featured
 FROM public.events
 WHERE deleted_at IS NULL
   AND status = 'published'
@@ -91,7 +121,8 @@ WHERE deleted_at IS NULL
 
 **No Edge Function change was required.** `sync-editorial` reads the view with `select("*")`
 and spreads every column into the JSON, so the field publishes itself the moment the view has
-it — to iOS, Android, web, and anything built later, simultaneously.
+it — to iOS, Android and anything built later, simultaneously. (The website does not go through
+this endpoint at all; it queries `events` directly.)
 
 ### Endpoint
 
@@ -104,7 +135,7 @@ Public, no authentication.
 
 ### Response
 
-`is_featured` appears on **every** event object, not in a separate `featured_event` key:
+`is_home_featured` appears on **every** event object, not in a separate `featured_event` key:
 
 ```json
 {
@@ -125,7 +156,7 @@ Public, no authentication.
       "immagine_url": null,
       "updated_at": "2026-06-12T10:49:16.113261+00:00",
       "sync_version": 6,
-      "is_featured": true,
+      "is_home_featured": true,
       "attachments": [
         {
           "id": "…",
@@ -147,7 +178,7 @@ Public, no authentication.
 
 ### Decoding rules (mandatory)
 
-`is_featured` must be decoded **defensively**, exactly like every other optional event field:
+`is_home_featured` must be decoded **defensively**, exactly like every other optional event field:
 
 | Wire value | Decoded |
 |---|---|
@@ -157,7 +188,7 @@ Public, no authentication.
 | `null` | `false` |
 | wrong type (`"yes"`, `1`, …) | `false`, and **the event must still decode** |
 
-A malformed `is_featured` must never drop the event from the list. Only `id` and `titolo` are
+A malformed `is_home_featured` must never drop the event from the list. Only `id` and `titolo` are
 hard-required on an event.
 
 This also means clients are **forward- and backward-compatible**: an app running against a
@@ -169,13 +200,17 @@ backend without the column simply sees `false` everywhere and renders no banner.
 
 ### 4.1 One featured event
 
-Exactly zero or one event should be featured. The admin toggle enforces this by clearing the
-previous winner in the same mutation.
+Exactly zero or one event is featured, and this is **enforced by the database** via the unique
+partial index `events_single_home_featured_idx`. The `set_home_featured_event()` RPC clears the
+previous winner before setting the new one, so switching the promoted event is a single
+transaction and never leaves two rows flagged.
 
 ### 4.2 Resolution when several are flagged
 
-Reachable only via direct DB edits, but every client **must** handle it — deterministically,
-without crashing, and without the banner flickering between candidates on successive syncs.
+In practice unreachable — the unique index forbids it — but every client **must** still handle
+it defensively: deterministically, without crashing, and without the banner flickering between
+candidates on successive syncs. Treat this as belt-and-braces against a future schema change
+that drops the index.
 
 Ordering, first match wins:
 
@@ -214,7 +249,7 @@ vanish on its own when an editor clears the flag.
 
 What Android must do, concretely:
 
-1. **Read `is_featured`** from the existing events array — nullable Boolean, default `false`.
+1. **Read `is_home_featured`** from the existing events array — nullable Boolean, default `false`.
 2. **Resolve the winner** with the §4.2 ordering; expose it as derived state
    (`StateFlow<Event?>`), never as a stored field.
 3. **Cache it as part of the event row** (`cached_events.isFeatured`), never as a separate
@@ -235,7 +270,7 @@ What Android must do, concretely:
 @Serializable
 data class EventDto(
     // … existing fields …
-    @SerialName("is_featured") val isFeatured: Boolean? = null,
+    @SerialName("is_home_featured") val isFeatured: Boolean? = null,
 )
 
 // ── Domain model ─────────────────────────────────────────────────────────────
@@ -321,14 +356,14 @@ lands.
 
 ### The rule
 
-**`is_featured` must be part of the cache-invalidation signature.**
+**`is_home_featured` must be part of the cache-invalidation signature.**
 
 ### Why — this is a real bug, already hit once
 
 The cache signature is a hash over the payload used to decide whether to rewrite the persisted
 cache. iOS originally hashed only event `id`, `title` and `description`.
 
-Clearing `is_featured` usually changes **nothing else** about the event. So with a text-only
+Clearing `is_home_featured` usually changes **nothing else** about the event. So with a text-only
 signature:
 
 1. Admin un-features the event.
@@ -389,7 +424,7 @@ Log these around the point where the store is replaced after a successful sync. 
                     │  "in evidenza" (exclusive)│
                     └────────────┬─────────────┘
                                  ▼
-                       events.is_featured          ← single source of truth
+                       events.is_home_featured          ← single source of truth
                                  │
                                  ▼
                       mobile_events_public          (view; column appended last)
@@ -414,16 +449,18 @@ what is promoted — no date windows, no `tipo == "Festival"` checks, no slug al
 
 | Platform | Writes the flag | Reads the flag | Renders a banner |
 |---|---|---|---|
-| **Admin (web)** | ✅ exclusive toggle in `AdminEditorialEvents.tsx` | ✅ | n/a |
-| **iOS** | — | ✅ shipped 2026-08-12 | ✅ `HomeFeaturedEventCard` |
+| **Admin (web)** | ✅ event-form toggle → `set_home_featured_event()` RPC | ✅ | n/a |
+| **Public website** | — | ✅ `useHomeFeaturedEvent` hook (since 2026-08-07) | ✅ home banner |
+| **iOS** | — | ✅ client shipped 2026-08-12 | ⏳ blocked on the view migration |
 | **Android** | — | ⏳ pending — spec is §5 | ⏳ pending |
-| **Public website** | — | ❌ **not wired** | ❌ homepage banner is still hardcoded |
 
-> **Accuracy note.** The public site (`suitetti.org`) does **not** consume `is_featured` today.
-> Its homepage still renders a hardcoded `FestivalPromoBanner` + `FestivalThankYouSection`, and
-> "Prossimi Eventi" is `events.slice(0, 3)`. Featuring an event changes the **apps**, not the
-> website. Wiring the public homepage to the same flag is an open decision — the field and the
-> admin toggle are already in place for it.
+All four read one column. The admin is the only writer, and it writes through the RPC so the
+uniqueness guarantee holds.
+
+> **Current blocker.** `mobile_events_public` does not yet expose the column in production, so
+> `sync-editorial` omits it, every event decodes as `false`, and the app banner stays hidden.
+> The website banner is unaffected — it queries `events` directly. Applying
+> `20260818120000_expose_home_featured_to_mobile.sql` is the single step that lights up mobile.
 
 ---
 
@@ -467,7 +504,7 @@ should be the **first** thing verified: adding the field must not change anythin
 | Document | What it adds |
 |---|---|
 | `API_CONTRACT.md` | Full event field table + decode-resilience rules |
-| `DATA_MODELS.md` | `is_featured` in the DTO/domain/Room model tables |
+| `DATA_MODELS.md` | `is_home_featured` in the DTO/domain/Room model tables |
 | `UI_COMPONENTS.md` | `HomeFeaturedEventCard` visual + accessibility spec |
 | `APP_FLOW.md` | Where the banner sits on Home and how it behaves across launch/sync |
 | `ANDROID_CONVERSION_GUIDE.md` | Compose parity rules and the zero-backend-work guarantee |

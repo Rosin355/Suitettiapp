@@ -625,7 +625,7 @@ backend flag, and Compose must implement the same behaviour.
 ```
 CMS "in evidenza" toggle
         ↓
-events.is_featured            (boolean NOT NULL DEFAULT false)
+events.is_home_featured            (boolean NOT NULL DEFAULT false)
         ↓
 mobile_events_public          (view; column appended last)
         ↓
@@ -694,16 +694,16 @@ return { ...e, attachments: list }
 Consequences worth relying on:
 
 - There is **one** endpoint for every client. The moment the column exists on the view, iOS,
-  Android, the web, and anything built later all receive `is_featured` in the same payload.
+  Android, the web, and anything built later all receive `is_home_featured` in the same payload.
   There is no per-platform endpoint, no API version, and no Android-specific deploy.
 - The endpoint is **public and unauthenticated** — Android needs no key to consume it.
-- Adding `is_featured` therefore required **one migration and no Edge Function change**, and
+- Adding `is_home_featured` therefore required **one migration and no Edge Function change**, and
   Android will require **none at all**: it only has to decode a field that is already on the
   wire.
 
 The one caveat to remember: the `mobile_*_public` views use **explicit column lists**, not
 `SELECT *`. So a *future, different* field will still need a one-line view change before any
-client can see it. For `is_featured` that work is already done.
+client can see it. For `is_home_featured` that work is already done.
 
 **Contract guard.** `scripts/verify-featured-event.sh` (in the iOS repo) asserts all of this
 against the live endpoint with no credentials — whether the column is published, that the
@@ -718,7 +718,7 @@ the backend contract before blaming the client.
 @Serializable
 data class EventDto(
     // … existing fields …
-    @SerialName("is_featured") val isFeatured: Boolean? = null,
+    @SerialName("is_home_featured") val isFeatured: Boolean? = null,
 )
 
 // Domain model
